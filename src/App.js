@@ -154,13 +154,7 @@ export default function App() {
 }
 
 function StatusBar() {
-  const saat = new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })
-  return (
-    <div style={{ background: '#f8f8f6', padding: '12px 22px 6px', display: 'flex', justifyContent: 'space-between', flexShrink: 0 }}>
-      <span style={{ fontSize: 13, fontWeight: 500 }}>{saat}</span>
-      <span style={{ fontSize: 11, color: '#888' }}>●●● WiFi ▮</span>
-    </div>
-  )
+  return null
 }
 
 function GirisSayfa({ setKullanici }) {
@@ -1852,7 +1846,7 @@ function AltNav({ aktifEkran, setAktifEkran, okunmamisSayisi }) {
 
 const st = {
   kapsayici: { minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px 0', background: '#f0f0ee' },
-  telefon: { width: 360, maxWidth: '100vw', background: '#f8f8f6', borderRadius: 40, overflow: 'hidden', display: 'flex', flexDirection: 'column', height: 720, boxShadow: '0 20px 60px rgba(0,0,0,0.12)' },
+  telefon: { width: '100%', maxWidth: '100vw', background: '#f8f8f6', borderRadius: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column', minHeight: '100vh', boxShadow: 'none' },
   anaButon: { width: '100%', padding: 14, background: '#1D9E75', color: '#fff', border: 'none', borderRadius: 14, fontSize: 15, fontWeight: 500, cursor: 'pointer' },
   label: { fontSize: 12, color: '#888', margin: '0 0 6px' },
   input: { width: '100%', background: '#fff', border: '0.5px solid #e8e8e4', borderRadius: 12, padding: '11px 14px', fontSize: 14, color: '#1a1a1a', marginBottom: 16, outline: 'none' },
