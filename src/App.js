@@ -1845,8 +1845,8 @@ function AltNav({ aktifEkran, setAktifEkran, okunmamisSayisi }) {
 }
 
 const st = {
-  kapsayici: { minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px 0', background: '#f0f0ee' },
-  telefon: { width: '100%', maxWidth: '100vw', background: '#f8f8f6', borderRadius: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column', minHeight: '100vh', boxShadow: 'none' },
+  kapsayici: { height: '100vh', display: 'flex', flexDirection: 'column', background: '#f8f8f6', overflow: 'hidden' },
+  telefon: { width: '100%', maxWidth: '100vw', background: '#f8f8f6', borderRadius: 0, display: 'flex', flexDirection: 'column', height: '100vh', boxShadow: 'none', overflow: 'hidden' },  
   anaButon: { width: '100%', padding: 14, background: '#1D9E75', color: '#fff', border: 'none', borderRadius: 14, fontSize: 15, fontWeight: 500, cursor: 'pointer' },
   label: { fontSize: 12, color: '#888', margin: '0 0 6px' },
   input: { width: '100%', background: '#fff', border: '0.5px solid #e8e8e4', borderRadius: 12, padding: '11px 14px', fontSize: 14, color: '#1a1a1a', marginBottom: 16, outline: 'none' },
