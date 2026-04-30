@@ -1,13 +1,30 @@
-body {
+* {
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  padding: 0;
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
 }
 
-code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
-    monospace;
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: #f8f8f6;
+  color: #1a1a1a;
+}
+
+.leaflet-container {
+  width: 100%;
+  height: 100%;
+  border-radius: 14px;
+}
+
+.leaflet-container {
+  outline: none !important;
+  border-radius: 0 !important;
+}
+
+.leaflet-control-attribution {
+  font-size: 8px !important;
+  opacity: 0.1 !important;
+  background: transparent !important;
+  box-shadow: none !important;
 }
