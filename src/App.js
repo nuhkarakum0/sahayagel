@@ -1,11 +1,10 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { supabase } from './supabase'
 import './App.css'
 import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from 'react-leaflet'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
-import { getCities, getDistrictsByCityCode, getCityCodes } from 'turkey-neighbourhoods'
-
+import { getCities, getDistrictsByCityCode } from 'turkey-neighbourhoods'
 // Leaflet ikon düzeltmesi
 delete L.Icon.Default.prototype._getIconUrl
 L.Icon.Default.mergeOptions({
@@ -22,13 +21,6 @@ const sahaIkonu = new L.Icon({
   popupAnchor: [1, -34],
 })
 
-const ilanIkonu = new L.Icon({
-  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png',
-  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-})
 
 
 
@@ -43,6 +35,7 @@ export default function App() {
   const [okunmamisSayisi, setOkunmamisSayisi] = useState(0)
   const [hedefKullanici, setHedefKullanici] = useState(null)
   const [seciliOzelMesaj, setSeciliOzelMesaj] = useState(null)
+  
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -163,17 +156,18 @@ export default function App() {
                   kullanici={kullanici}
                   karsi={seciliOzelMesaj}
                   geriDon={() => setSeciliOzelMesaj(null)}
-                  onKullaniciTikla={onKullaniciTikla}
+                  onKullaniciTikla={(id) => setHedefKullanici(id)}
                 />
               </div>
             )}
 
-            {hedefKullanici && (
-              <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: '#f8f8f6', zIndex: 50, display: 'flex', flexDirection: 'column' }}>
-                   <KullaniciProfil
+           {hedefKullanici && (
+  <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: '#f8f8f6', zIndex: 300, display: 'flex', flexDirection: 'column' }}>
+                <KullaniciProfil
                     kullanici={kullanici}
                     hedefId={hedefKullanici}
                     geriDon={() => setHedefKullanici(null)}
+                    onKullaniciTikla={(id) => setHedefKullanici(id)}
                     onMesajAc={(karsi) => {
                       setHedefKullanici(null)
                       setSeciliOzelMesaj(karsi)
@@ -301,22 +295,20 @@ function AnaSayfa({ kullanici, macaGit, onMaclarYuklendi, setAktifEkran }) {
   const [seviyeFiltre, setSeviyeFiltre] = useState('Tümü')
 
   const filtreler = ['Tümü', 'Bu akşam']
-  const saatSecenekleri = ['Tümü', 'Bugün', 'Bu hafta', 'Bu akşam', 'Yarın']
+ const maclariGetir = async () => {
+  setYukleniyor(true)
+  const { data } = await supabase
+    .from('maclar')
+    .select(`*, kullanicilar!maclar_organizator_id_fkey(isim, avatar_url), katilimlar(id, durum)`)
+    .order('saat', { ascending: true })
+  setMaclar(data || [])
+  onMaclarYuklendi(data || [])
+  setYukleniyor(false)
+}
 
-  const maclariGetir = async () => {
-    setYukleniyor(true)
-    const { data, error } = await supabase
-      .from('maclar')
-      .select(`*, kullanicilar!maclar_organizator_id_fkey(isim, avatar_url), katilimlar(id, durum)`)
-      .order('saat', { ascending: true })
-    setMaclar(data || [])
-    onMaclarYuklendi(data || [])
-    setYukleniyor(false)
-  }
+// eslint-disable-next-line react-hooks/exhaustive-deps
+useEffect(() => { maclariGetir() }, [])
 
-  useEffect(() => { maclariGetir() }, [])
-
-  const ilceler = ['Tümü', ...new Set((maclar || []).map(m => m.ilce).filter(Boolean))]
 
   const filtreliMaclar = (maclar || []).filter(m => {
     // Format filtresi
@@ -565,7 +557,6 @@ function MacKart({ mac, onClick }) {
   const doluluk = (katilan / mac.toplam_kisi) * 100
   const acil = acikYer <= 2 && acikYer > 0
   const dolu = acikYer <= 0
-  const tarih = new Date(mac.saat).toLocaleString('tr-TR', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
 
   return (
    <div onClick={onClick} style={{
@@ -669,7 +660,6 @@ function DetaySayfa({ mac, kullanici, geriDon, onKullaniciTikla }) {
   const [gonderiyor, setGonderiyor] = useState(false)
   const [aktifTab, setAktifTab] = useState(mac.baslangicTab || 'detay')
   const mesajSonuRef = useRef(null)
-  const [sohbetteyim, setSohbetteyim] = useState(false)
 
   const benOrganizatorum = kullanici.id === mac.organizator_id
   const katilimSayisi = katilimlar.filter(k => k.durum === 'onaylandi').length
@@ -677,29 +667,29 @@ function DetaySayfa({ mac, kullanici, geriDon, onKullaniciTikla }) {
   const acikYer = mac.toplam_kisi - katilimSayisi
   const tarih = new Date(mac.saat).toLocaleString('tr-TR', { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })
 
-  const katilimlariGetir = async () => {
-    setKatilimYukleniyor(true)
-    const { data } = await supabase
-      .from('katilimlar')
-      .select('*, kullanicilar(isim, pozisyon, seviye, avatar_url)')
-      .eq('mac_id', mac.id)
-      .order('olusturuldu', { ascending: true })
-    setKatilimlar(data || [])
-    const benimKatilimim = (data || []).find(k => k.kullanici_id === kullanici.id)
-    if (benimKatilimim) setKatilindi(true)
-    setKatilimYukleniyor(false)
-  }
+ const katilimlariGetir = useCallback(async () => {
+  setKatilimYukleniyor(true)
+  const { data } = await supabase
+    .from('katilimlar')
+    .select('*, kullanicilar(isim, pozisyon, seviye, avatar_url)')
+    .eq('mac_id', mac.id)
+    .order('olusturuldu', { ascending: true })
+  setKatilimlar(data || [])
+  const benimKatilimim = (data || []).find(k => k.kullanici_id === kullanici.id)
+  if (benimKatilimim) setKatilindi(true)
+  setKatilimYukleniyor(false)
+}, [mac.id, kullanici.id])
 
-  const mesajlariGetir = async () => {
-    setMesajYukleniyor(true)
-    const { data } = await supabase
-      .from('mesajlar')
-      .select('*, kullanicilar(isim, avatar_url)')
-      .eq('mac_id', mac.id)
-      .order('olusturuldu', { ascending: true })
-    setMesajlar(data || [])
-    setMesajYukleniyor(false)
-  }
+const mesajlariGetir = useCallback(async () => {
+  setMesajYukleniyor(true)
+  const { data } = await supabase
+    .from('mesajlar')
+    .select('*, kullanicilar(isim, avatar_url)')
+    .eq('mac_id', mac.id)
+    .order('olusturuldu', { ascending: true })
+  setMesajlar(data || [])
+  setMesajYukleniyor(false)
+}, [mac.id])
   useEffect(() => {
   if (mesajSonuRef.current) {
     mesajSonuRef.current.scrollIntoView({ behavior: 'auto' })
@@ -740,7 +730,7 @@ function DetaySayfa({ mac, kullanici, geriDon, onKullaniciTikla }) {
     .eq('tip', 'mesaj')
     .eq('okundu', false)
     .then(() => {})
-}, [aktifTab])
+}, [aktifTab, kullanici.id, mac.id])
 
 useEffect(() => {
   if (!kullanici) return
@@ -769,7 +759,7 @@ useEffect(() => {
       .eq('mac_id', mac.id)
       .then(() => {})
   }
-}, [aktifTab])
+}, [aktifTab, kullanici.id, mac.id])
 
  const katil = async () => {
   if (katilindi || acikYer <= 0) return
@@ -1104,7 +1094,7 @@ const mesajGonder = async () => {
       if (data) setArkadasDurum(data)
     }
     kontrol()
-  }, [katilim.kullanici_id, kullanici])
+  }, [katilim.kullanici_id, kullanici, benimKartim])
 
   const arkadasEkle = async () => {
     await supabase.from('arkadasliklar').insert({
@@ -1939,7 +1929,7 @@ useEffect(() => {
 )
 }
 
-function KullaniciProfil({ kullanici, hedefId, geriDon, onMesajAc }) {
+function KullaniciProfil({ kullanici, hedefId, geriDon, onMesajAc, onKullaniciTikla }) {
   const [profil, setProfil] = useState(null)
   const [arkadasDurum, setArkadasDurum] = useState(null)
   const [yukleniyor, setYukleniyor] = useState(true)
@@ -1990,13 +1980,6 @@ function KullaniciProfil({ kullanici, hedefId, geriDon, onMesajAc }) {
     setArkadasDurum(prev => ({ ...prev, durum: 'onaylandi' }))
   }
 
-  const pozisyonRenk = {
-    'Kaleci': { bg: '#fdecea', text: '#c0392b' },
-    'Defans': { bg: '#e8eef7', text: '#185FA5' },
-    'Orta saha': { bg: '#e8f7f1', text: '#0F6E56' },
-    'Forvet': { bg: '#fdf3e8', text: '#854F0B' },
-    'Belirtilmedi': { bg: '#f0f0ee', text: '#888' },
-  }
 
   const benimProfil = hedefId === kullanici.id
   const arkadaş = arkadasDurum?.durum === 'onaylandi'
@@ -2171,13 +2154,16 @@ function ArkadaslarSayfa({ kullanici, geriDon, onKullaniciTikla }) {
   }
 
   if (seciliArk) return (
-    <OzelMesajSayfa
-      kullanici={kullanici}
-      karsi={seciliArk}
-      geriDon={() => setSeciliArk(null)}
-      onKullaniciTikla={onKullaniciTikla}
-    />
-  )
+  <OzelMesajSayfa
+    kullanici={kullanici}
+    karsi={seciliArk}
+    geriDon={() => setSeciliArk(null)}
+    onKullaniciTikla={(id) => {
+      setSeciliArk(null)
+      onKullaniciTikla && onKullaniciTikla(id)
+    }}
+  />
+)
 
   const arkadasBilgi = (a) => a.gonderen_id === kullanici.id ? a.alici : a.gonderen
 
@@ -2271,41 +2257,42 @@ function ArkadaslarSayfa({ kullanici, geriDon, onKullaniciTikla }) {
   )
 }
 
-function OzelMesajSayfa({ kullanici, karsi, geriDon }) {
+function OzelMesajSayfa({ kullanici, karsi, geriDon, onKullaniciTikla }) {
   const [mesajlar, setMesajlar] = useState([])
   const [yeniMesaj, setYeniMesaj] = useState('')
   const [gonderiyor, setGonderiyor] = useState(false)
   const mesajSonuRef = useRef(null)
 
-  useEffect(() => {
-    const getir = async () => {
-      const { data } = await supabase
-        .from('ozel_mesajlar')
-        .select('*')
-        .or(`and(gonderen_id.eq.${kullanici.id},alici_id.eq.${karsi.id}),and(gonderen_id.eq.${karsi.id},alici_id.eq.${kullanici.id})`)
-        .order('olusturuldu', { ascending: true })
-      setMesajlar(data || [])
-    }
-    getir()
+useEffect(() => {
+  const getir = async () => {
+    const { data } = await supabase
+      .from('ozel_mesajlar')
+      .select('*')
+      .or(`and(gonderen_id.eq.${kullanici.id},alici_id.eq.${karsi.id}),and(gonderen_id.eq.${karsi.id},alici_id.eq.${kullanici.id})`)
+      .order('olusturuldu', { ascending: true })
+    setMesajlar(data || [])
+  }
+  getir()
 
-    const kanal = supabase
-      .channel(`ozel-${kullanici.id}-${karsi.id}`)
-      .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'ozel_mesajlar',
-      }, (payload) => {
-        if (
-          (payload.new.gonderen_id === kullanici.id && payload.new.alici_id === karsi.id) ||
-          (payload.new.gonderen_id === karsi.id && payload.new.alici_id === kullanici.id)
-        ) {
-          setMesajlar(prev => [...prev, payload.new])
-        }
-      })
-      .subscribe()
+const kanalAdi = `ozel-${[kullanici.id, karsi.id].sort().join('-')}-${Date.now()}`  
+  const kanal = supabase
+    .channel(kanalAdi)
+    .on('postgres_changes', {
+      event: 'INSERT',
+      schema: 'public',
+      table: 'ozel_mesajlar',
+    }, (payload) => {
+      if (
+        (payload.new.gonderen_id === kullanici.id && payload.new.alici_id === karsi.id) ||
+        (payload.new.gonderen_id === karsi.id && payload.new.alici_id === kullanici.id)
+      ) {
+        setMesajlar(prev => [...prev, payload.new])
+      }
+    })
+    .subscribe()
 
-    return () => supabase.removeChannel(kanal)
-  }, [kullanici.id, karsi.id])
+  return () => supabase.removeChannel(kanal)
+}, [kullanici.id, karsi.id])
 
   useEffect(() => {
     if (mesajSonuRef.current) {
@@ -2348,7 +2335,7 @@ const gonder = async () => {
     <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
       <div style={{ padding: '14px 22px 12px', borderBottom: '0.5px solid #ebebE8', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 12 }}>
        <span onClick={geriDon} style={{ fontSize: 24, color: '#1D9E75', cursor: 'pointer' }}>‹</span>
-        <div onClick={() => onKullaniciTikla && onKullaniciTikla(karsi.id)} style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', flex: 1 }}>
+       <div onClick={() => onKullaniciTikla && onKullaniciTikla(karsi?.id)} style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', flex: 1 }}>
           {karsi?.avatar_url ? (
             <img src={karsi.avatar_url} style={{ width: 36, height: 36, borderRadius: '50%', objectFit: 'cover' }} alt="avatar" />
           ) : (
