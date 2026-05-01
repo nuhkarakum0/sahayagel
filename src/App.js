@@ -1930,8 +1930,9 @@ function KullaniciProfil({ kullanici, hedefId, geriDon }) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
-      <div style={{ padding: '14px 22px 0', flexShrink: 0 }}>
-        <span onClick={geriDon} style={{ fontSize: 24, color: '#1D9E75', cursor: 'pointer' }}>‹</span>
+      <div style={{ padding: '14px 22px 0', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 10 }}>
+        <span onClick={geriDon} style={{ fontSize: 28, color: '#1D9E75', cursor: 'pointer', fontWeight: 600 }}>‹</span>
+       <span style={{ fontSize: 15, fontWeight: 600, color: '#1a1a1a' }}>Profil</span>
       </div>
 
       <div style={{ flex: 1, overflowY: 'auto' }}>
