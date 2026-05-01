@@ -42,6 +42,7 @@ export default function App() {
   const [bildirimler, setBildirimler] = useState([])
   const [okunmamisSayisi, setOkunmamisSayisi] = useState(0)
   const [hedefKullanici, setHedefKullanici] = useState(null)
+  const [seciliOzelMesaj, setSeciliOzelMesaj] = useState(null)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -155,13 +156,28 @@ export default function App() {
                 geriDon={() => setAktifEkran('anasayfa')}
               />
             )}
+
+            {seciliOzelMesaj && (
+              <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: '#f8f8f6', zIndex: 200, display: 'flex', flexDirection: 'column' }}>
+                <OzelMesajSayfa
+                  kullanici={kullanici}
+                  karsi={seciliOzelMesaj}
+                  geriDon={() => setSeciliOzelMesaj(null)}
+                />
+              </div>
+            )}
+
             {hedefKullanici && (
               <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: '#f8f8f6', zIndex: 50, display: 'flex', flexDirection: 'column' }}>
-                    <KullaniciProfil
-                  kullanici={kullanici}
-                  hedefId={hedefKullanici}
-                  geriDon={() => setHedefKullanici(null)}
-                />
+                   <KullaniciProfil
+                    kullanici={kullanici}
+                    hedefId={hedefKullanici}
+                    geriDon={() => setHedefKullanici(null)}
+                    onMesajAc={(karsi) => {
+                      setHedefKullanici(null)
+                      setSeciliOzelMesaj(karsi)
+                    }}
+                  />
               </div>
             )}
 
@@ -1060,8 +1076,7 @@ const mesajGonder = async () => {
             {renk.label}
           </span>
           {!benimKartim && kullanici && (
-            <button onClick={arkadasEkle} disabled={!!arkadasDurum} style={{
-              fontSize: 11, fontWeight: 500, padding: '4px 10px', borderRadius: 20, border: 'none', cursor: arkadasDurum ? 'default' : 'pointer', whiteSpace: 'nowrap',
+            <button onClick={(e) => { e.stopPropagation(); arkadasEkle() }} disabled={!!arkadasDurum} style={{              fontSize: 11, fontWeight: 500, padding: '4px 10px', borderRadius: 20, border: 'none', cursor: arkadasDurum ? 'default' : 'pointer', whiteSpace: 'nowrap',
               background: arkadasDurum?.durum === 'onaylandi' ? '#e8f7f1' : arkadasDurum?.durum === 'bekliyor' ? '#f5f5f3' : '#e8eef7',
               color: arkadasDurum?.durum === 'onaylandi' ? '#0F6E56' : arkadasDurum?.durum === 'bekliyor' ? '#aaa' : '#185FA5',
             }}>
@@ -1103,9 +1118,6 @@ function IlanSayfa({ kullanici, bitti, geriDon }) {
 
  const yayinla = async () => {
 if (!sahaAdi || !il || !ilce || !saat) { setHata('Lütfen tüm zorunlu alanları doldur.'); return }
-
-
-  if (!sahaAdi || !ilce || !saat) { setHata('Lütfen tüm zorunlu alanları doldur.'); return }
   setYukleniyor(true); setHata('')
 
   let lat = konum?.lat || null
@@ -1305,6 +1317,12 @@ function BildirimSayfa({ kullanici, bildirimler, setBildirimler, setOkunmamisSay
   await supabase.from('bildirimler').update({ okundu: true }).eq('id', bildirim.id)
   setBildirimler(prev => prev.map(b => b.id === bildirim.id ? { ...b, okundu: true } : b))
   setOkunmamisSayisi(prev => Math.max(0, prev - 1))
+
+  if (bildirim.tip === 'mesaj' && !bildirim.mac_id && bildirim.gonderen_id) {
+    // Özel mesaj bildirimi — özel sohbete git
+    onKullaniciTikla && onKullaniciTikla(bildirim.gonderen_id)
+    return
+  }
 
   if (bildirim.mac_id && (bildirim.tip === 'mesaj' || bildirim.tip === 'basvuru' || bildirim.tip === 'onay' || bildirim.tip === 'red')) {
     const { data: mac } = await supabase
@@ -1862,7 +1880,7 @@ useEffect(() => {
 )
 }
 
-function KullaniciProfil({ kullanici, hedefId, geriDon }) {
+function KullaniciProfil({ kullanici, hedefId, geriDon, onMesajAc }) {
   const [profil, setProfil] = useState(null)
   const [arkadasDurum, setArkadasDurum] = useState(null)
   const [yukleniyor, setYukleniyor] = useState(true)
@@ -1962,9 +1980,9 @@ function KullaniciProfil({ kullanici, hedefId, geriDon }) {
 
             {!benimProfil && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {arkadaş ? (
-                  <span style={{ fontSize: 12, fontWeight: 600, padding: '8px 16px', borderRadius: 20, background: 'rgba(255,255,255,0.2)', color: '#fff' }}>✓ Arkadaş</span>
-                ) : istekGonderildi ? (
+               {arkadaş ? (
+                  <button onClick={() => onMesajAc && onMesajAc(profil)} style={{ fontSize: 12, fontWeight: 600, padding: '8px 16px', borderRadius: 20, background: '#fff', color: '#1D9E75', border: 'none', cursor: 'pointer' }}>💬 Mesaj gönder</button>
+                  ) : istekGonderildi ? (
                   <span style={{ fontSize: 12, fontWeight: 600, padding: '8px 16px', borderRadius: 20, background: 'rgba(255,255,255,0.2)', color: '#fff' }}>İstek gönderildi</span>
                 ) : istekAlindi ? (
                   <button onClick={arkadasKabul} style={{ fontSize: 12, fontWeight: 600, padding: '8px 16px', borderRadius: 20, background: '#fff', color: '#1D9E75', border: 'none', cursor: 'pointer' }}>Kabul et ✓</button>
@@ -2087,20 +2105,29 @@ function ArkadaslarSayfa({ kullanici, geriDon, onKullaniciTikla }) {
           ) : arkadaslar.map(a => {
             const ark = arkadasBilgi(a)
             return (
-              <div key={a.id} onClick={() => setSeciliArk(ark)} style={{ background: '#fff', borderRadius: 14, padding: '12px 14px', marginBottom: 10, border: '0.5px solid #ebebE8', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' }}>
-                {ark?.avatar_url ? (
-                  <img src={ark.avatar_url} style={{ width: 46, height: 46, borderRadius: '50%', objectFit: 'cover' }} alt="avatar" />
-                ) : (
-                  <div style={{ width: 46, height: 46, borderRadius: '50%', background: '#e8f7f1', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 600, color: '#0F6E56' }}>
-                    {ark?.isim?.slice(0, 2).toUpperCase() || '?'}
-                  </div>
-                )}
-                <div style={{ flex: 1 }}>
-                  <p style={{ fontSize: 14, fontWeight: 600, color: '#1a1a1a', margin: '0 0 3px' }}>{ark?.isim || 'İsimsiz'}</p>
-                  <p style={{ fontSize: 12, color: '#aaa', margin: 0 }}>{ark?.pozisyon || 'Pozisyon belirtilmedi'}</p>
-                </div>
-                <div style={{ fontSize: 13, color: '#1D9E75', fontWeight: 500 }}>Mesaj →</div>
-              </div>
+            <div key={a.id} style={{ background: '#fff', borderRadius: 14, padding: '12px 14px', marginBottom: 10, border: '0.5px solid #ebebE8' }}>
+  <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
+    {ark?.avatar_url ? (
+      <img src={ark.avatar_url} style={{ width: 46, height: 46, borderRadius: '50%', objectFit: 'cover' }} alt="avatar" />
+    ) : (
+      <div style={{ width: 46, height: 46, borderRadius: '50%', background: '#e8f7f1', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 600, color: '#0F6E56' }}>
+        {ark?.isim?.slice(0, 2).toUpperCase() || '?'}
+      </div>
+    )}
+    <div style={{ flex: 1 }}>
+      <p style={{ fontSize: 14, fontWeight: 600, color: '#1a1a1a', margin: '0 0 3px' }}>{ark?.isim || 'İsimsiz'}</p>
+      <p style={{ fontSize: 12, color: '#aaa', margin: 0 }}>{ark?.pozisyon || 'Pozisyon belirtilmedi'}</p>
+    </div>
+  </div>
+  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+    <button onClick={() => onKullaniciTikla && onKullaniciTikla(ark.id)} style={{ padding: '8px', borderRadius: 10, border: 'none', background: '#f5f5f3', color: '#1a1a1a', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>
+      👤 Profil
+    </button>
+    <button onClick={() => setSeciliArk(ark)} style={{ padding: '8px', borderRadius: 10, border: 'none', background: '#e8f7f1', color: '#0F6E56', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>
+      💬 Mesaj
+    </button>
+  </div>
+</div>
             )
           })
         ) : (
