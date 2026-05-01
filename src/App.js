@@ -779,14 +779,16 @@ const mesajGonder = async () => {
   const aktifIdler = (aktifler || []).map(a => a.kullanici_id)
 
   if (kullanici.id !== mac.organizator_id && !aktifIdler.includes(mac.organizator_id)) {
-    await bildirimGonder(
-      mac.organizator_id,
-      `${gondereninAdi}`,
-      `${mac.saha_adi} sohbeti: "${icerik.slice(0, 40)}${icerik.length > 40 ? '...' : ''}"`,
-      'mesaj',
-      mac.id,
-      gondereninAvatari
-    )
+  await bildirimGonder(
+  mac.organizator_id,
+  `${gondereninAdi}`,
+  `${mac.saha_adi} sohbeti: "${icerik.slice(0, 40)}${icerik.length > 40 ? '...' : ''}"`,
+  'mesaj',
+  mac.id,
+  gondereninAvatari,
+  kullanici.id
+)
+
   }
 
   const onaylananlar = katilimlar.filter(k =>
@@ -797,13 +799,14 @@ const mesajGonder = async () => {
 
   for (const k of onaylananlar) {
     await bildirimGonder(
-      k.kullanici_id,
-      `${gondereninAdi}`,
-      `${mac.saha_adi} sohbeti: "${icerik.slice(0, 40)}${icerik.length > 40 ? '...' : ''}"`,
-      'mesaj',
-      mac.id,
-      gondereninAvatari
-    )
+  k.kullanici_id,
+  `${gondereninAdi}`,
+  `${mac.saha_adi} sohbeti: "${icerik.slice(0, 40)}${icerik.length > 40 ? '...' : ''}"`,
+  'mesaj',
+  mac.id,
+  gondereninAvatari,
+  kullanici.id
+)
   }
 
   setGonderiyor(false)
@@ -1019,11 +1022,10 @@ const mesajGonder = async () => {
     if (!kullanici || benimKartim) return
     const kontrol = async () => {
       const { data } = await supabase
-        .from('arkadasliklar')
-        .select('durum, gonderen_id')
-        .or(`gonderen_id.eq.${kullanici.id},alici_id.eq.${kullanici.id}`)
-        .or(`gonderen_id.eq.${katilim.kullanici_id},alici_id.eq.${katilim.kullanici_id}`)
-        .single()
+  .from('arkadasliklar')
+  .select('durum, gonderen_id')
+  .or(`and(gonderen_id.eq.${kullanici.id},alici_id.eq.${katilim.kullanici_id}),and(gonderen_id.eq.${katilim.kullanici_id},alici_id.eq.${kullanici.id})`)
+  .maybeSingle()
       if (data) setArkadasDurum(data)
     }
     kontrol()
@@ -1288,8 +1290,8 @@ if (!sahaAdi || !il || !ilce || !saat) { setHata('Lütfen tüm zorunlu alanları
 )
 }
 
-function BildirimSayfa({ kullanici, bildirimler, setBildirimler, setOkunmamisSayisi, onBildirimTikla }) {
-    const tumunuOku = async () => {
+function BildirimSayfa({ kullanici, bildirimler, setBildirimler, setOkunmamisSayisi, onBildirimTikla, onKullaniciTikla }) {
+      const tumunuOku = async () => {
     await supabase
       .from('bildirimler')
       .update({ okundu: true })
@@ -1363,10 +1365,11 @@ function BildirimSayfa({ kullanici, bildirimler, setBildirimler, setOkunmamisSay
   {b.tip === 'mesaj' && b.gonderen_avatar ? (
     <img src={b.gonderen_avatar} style={{ width: 42, height: 42, borderRadius: 14, objectFit: 'cover' }} alt="profil" />
   ) : (
-    <div style={{
-      width: 42, height: 42, borderRadius: 14,
+        <div onClick={(e) => { e.stopPropagation(); onKullaniciTikla && onKullaniciTikla(b.gonderen_id) }} style={{
+      width: 42, height: 42, borderRadius: 14, flexShrink: 0,
       background: b.okundu ? '#f5f5f3' : renk.bg,
       display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18,
+      cursor: 'pointer',
     }}>
       {tipIkon[b.tip] || '🔔'}
     </div>
@@ -1719,7 +1722,7 @@ if (seciliMac) return (
     </div>
   )
 }
-async function bildirimGonder(kullaniciId, baslik, icerik, tip, macId, gonderenAvatar = null) {
+async function bildirimGonder(kullaniciId, baslik, icerik, tip, macId, gonderenAvatar = null, gonderenId = null) {
   await supabase.from('bildirimler').insert({
     kullanici_id: kullaniciId,
     baslik,
@@ -1727,6 +1730,7 @@ async function bildirimGonder(kullaniciId, baslik, icerik, tip, macId, gonderenA
     tip,
     mac_id: macId,
     gonderen_avatar: gonderenAvatar,
+    gonderen_id: gonderenId,
   })
 }
 
@@ -1876,10 +1880,10 @@ function KullaniciProfil({ kullanici, hedefId, geriDon }) {
       setProfil(profilData)
 
       const { data: arkData } = await supabase
-        .from('arkadasliklar')
-        .select('*')
-        .or(`and(gonderen_id.eq.${kullanici.id},alici_id.eq.${hedefId}),and(gonderen_id.eq.${hedefId},alici_id.eq.${kullanici.id})`)
-        .single()
+  .from('arkadasliklar')
+  .select('*')
+  .or(`and(gonderen_id.eq.${kullanici.id},alici_id.eq.${hedefId}),and(gonderen_id.eq.${hedefId},alici_id.eq.${kullanici.id})`)
+  .maybeSingle()
       if (arkData) setArkadasDurum(arkData)
 
       const { data: katilimData } = await supabase
@@ -2007,7 +2011,7 @@ function KullaniciProfil({ kullanici, hedefId, geriDon }) {
   )
 }
 
-function ArkadaslarSayfa({ kullanici, geriDon }) {
+function ArkadaslarSayfa({ kullanici, geriDon, onKullaniciTikla }) {
   const [arkadaslar, setArkadaslar] = useState([])
   const [istekler, setIstekler] = useState([])
   const [aktifTab, setAktifTab] = useState('arkadaslar')
@@ -2177,18 +2181,36 @@ function OzelMesajSayfa({ kullanici, karsi, geriDon }) {
     }
   }, [mesajlar])
 
-  const gonder = async () => {
-    if (!yeniMesaj.trim() || gonderiyor) return
-    setGonderiyor(true)
-    const icerik = yeniMesaj.trim()
-    setYeniMesaj('')
-    await supabase.from('ozel_mesajlar').insert({
-      gonderen_id: kullanici.id,
-      alici_id: karsi.id,
-      icerik,
-    })
-    setGonderiyor(false)
-  }
+const gonder = async () => {
+  if (!yeniMesaj.trim() || gonderiyor) return
+  setGonderiyor(true)
+  const icerik = yeniMesaj.trim()
+  setYeniMesaj('')
+
+  await supabase.from('ozel_mesajlar').insert({
+    gonderen_id: kullanici.id,
+    alici_id: karsi.id,
+    icerik,
+  })
+
+  const { data: benimProfilim } = await supabase
+    .from('kullanicilar')
+    .select('isim, avatar_url')
+    .eq('id', kullanici.id)
+    .single()
+
+  await bildirimGonder(
+  karsi.id,
+  `${benimProfilim?.isim || 'Biri'}`,
+  `"${icerik.slice(0, 40)}${icerik.length > 40 ? '...' : ''}"`,
+  'mesaj',
+  null,
+  benimProfilim?.avatar_url || null,
+  kullanici.id
+)
+
+  setGonderiyor(false)
+}
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
