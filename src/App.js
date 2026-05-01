@@ -155,15 +155,15 @@ export default function App() {
                 geriDon={() => setAktifEkran('anasayfa')}
               />
             )}
-{hedefKullanici && (
-  <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: '#f8f8f6', zIndex: 50, display: 'flex', flexDirection: 'column' }}>
-    <KullaniciProfil
-      kullanici={kullanici}
-      hedefId={hedefKullanici}
-      geriDon={() => setHedefKullanici(null)}
-    />
-  </div>
-)}
+            {hedefKullanici && (
+              <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: '#f8f8f6', zIndex: 50, display: 'flex', flexDirection: 'column' }}>
+                    <KullaniciProfil
+                  kullanici={kullanici}
+                  hedefId={hedefKullanici}
+                  geriDon={() => setHedefKullanici(null)}
+                />
+              </div>
+            )}
 
             <AltNav aktifEkran={aktifEkran} setAktifEkran={setAktifEkran} okunmamisSayisi={okunmamisSayisi} />
           </>
