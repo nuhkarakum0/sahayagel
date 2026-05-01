@@ -41,6 +41,7 @@ export default function App() {
   const [maclar, setMaclar] = useState([])
   const [bildirimler, setBildirimler] = useState([])
   const [okunmamisSayisi, setOkunmamisSayisi] = useState(0)
+  const [hedefKullanici, setHedefKullanici] = useState(null)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -115,6 +116,7 @@ export default function App() {
                 mac={seciliMac}
                 kullanici={kullanici}
                 geriDon={() => setAktifEkran('anasayfa')}
+                onKullaniciTikla={(id) => setHedefKullanici(id)}
               />
             )}
             {aktifEkran === 'ilan' && (
@@ -127,6 +129,7 @@ export default function App() {
    {aktifEkran === 'bildirim' && (
   <BildirimSayfa
     kullanici={kullanici}
+    onKullaniciTikla={(id) => setHedefKullanici(id)}
     bildirimler={bildirimler}
     setBildirimler={setBildirimler}
     setOkunmamisSayisi={setOkunmamisSayisi}
@@ -148,6 +151,7 @@ export default function App() {
             {aktifEkran === 'arkadaslar' && (
               <ArkadaslarSayfa
                 kullanici={kullanici}
+                onKullaniciTikla={(id) => setHedefKullanici(id)}
                 geriDon={() => setAktifEkran('anasayfa')}
               />
             )}
@@ -569,7 +573,7 @@ function MacKart({ mac, onClick }) {
   )
 }
 
-function DetaySayfa({ mac, kullanici, geriDon }) {
+function DetaySayfa({ mac, kullanici, geriDon, onKullaniciTikla }) {
   const [katilindi, setKatilindi] = useState(false)
   const [katilimlar, setKatilimlar] = useState([])
   const [mesajlar, setMesajlar] = useState([])
@@ -886,7 +890,7 @@ const mesajGonder = async () => {
                 <>
                   <p style={{ fontSize: 12, color: '#aaa', fontWeight: 500, margin: '0 0 10px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Bekleyenler ({katilimlar.filter(k => k.durum === 'bekliyor').length})</p>
                   {katilimlar.filter(k => k.durum === 'bekliyor').map(k => (
-                  <KatilimciKart key={k.id} katilim={k} durumRenk={durumRenk} onOnayla={() => katilimGuncelle(k.id, 'onaylandi')} onReddet={() => katilimGuncelle(k.id, 'reddedildi')} gosterButon={true} kullanici={kullanici} />
+                  <KatilimciKart key={k.id} katilim={k} durumRenk={durumRenk} onKullaniciTikla={onKullaniciTikla} onOnayla={() => katilimGuncelle(k.id, 'onaylandi')} onReddet={() => katilimGuncelle(k.id, 'reddedildi')} gosterButon={true} kullanici={kullanici} />
                   ))}
                 </>
               )}
@@ -934,7 +938,7 @@ const mesajGonder = async () => {
         return (
           <div key={m.id} style={{ display: 'flex', flexDirection: benimMesajim ? 'row-reverse' : 'row', alignItems: 'flex-end', gap: 8 }}>
             {!benimMesajim && (
-              <div style={{ width: 30, height: 30, flexShrink: 0 }}>
+              <div onClick={() => onKullaniciTikla && onKullaniciTikla(m.kullanici_id)} style={{ width: 30, height: 30, flexShrink: 0, cursor: 'pointer' }}>
                 {!oncekiAyni && (
                   m.kullanicilar?.avatar_url ? (
                     <img src={m.kullanicilar.avatar_url} alt="avatar" style={{ width: 30, height: 30, borderRadius: '50%', objectFit: 'cover' }} />
@@ -948,7 +952,7 @@ const mesajGonder = async () => {
             )}
             <div style={{ maxWidth: '72%', display: 'flex', flexDirection: 'column', alignItems: benimMesajim ? 'flex-end' : 'flex-start' }}>
               {!oncekiAyni && !benimMesajim && (
-                <p style={{ fontSize: 11, color: '#aaa', margin: '0 0 4px', paddingLeft: 4 }}>{m.kullanicilar?.isim || 'İsimsiz'}</p>
+              <p onClick={() => onKullaniciTikla && onKullaniciTikla(m.kullanici_id)} style={{ fontSize: 11, color: '#aaa', margin: '0 0 4px', paddingLeft: 4, cursor: 'pointer' }}>{m.kullanicilar?.isim || 'İsimsiz'}</p>
               )}
               <div style={{
                 padding: '9px 13px',
@@ -995,7 +999,7 @@ const mesajGonder = async () => {
   )
 }
 
-function KatilimciKart({ katilim, durumRenk, onOnayla, onReddet, gosterButon, kullanici }) {
+  function KatilimciKart({ katilim, durumRenk, onOnayla, onReddet, gosterButon, kullanici, onKullaniciTikla }) {
   const renk = durumRenk[katilim.durum] || durumRenk['bekliyor']
   const baslarf = katilim.kullanicilar?.isim?.split(' ').map(s => s[0]).join('').slice(0, 2).toUpperCase() || '??'
   const benimKartim = katilim.kullanici_id === kullanici?.id
@@ -1025,8 +1029,8 @@ function KatilimciKart({ katilim, durumRenk, onOnayla, onReddet, gosterButon, ku
 
   return (
     <div style={{ background: '#fff', borderRadius: 14, padding: '12px 14px', marginBottom: 10, border: '0.5px solid #ebebE8' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: gosterButon ? 12 : 0 }}>
-        {katilim.kullanicilar?.avatar_url ? (
+    <div onClick={() => onKullaniciTikla && onKullaniciTikla(katilim.kullanici_id)} style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: gosterButon ? 12 : 0, cursor: 'pointer', flex: 1 }}> 
+          {katilim.kullanicilar?.avatar_url ? (
           <img src={katilim.kullanicilar.avatar_url} alt="avatar" style={{ width: 42, height: 42, borderRadius: '50%', objectFit: 'cover' }} />
         ) : (
           <div style={{ width: 42, height: 42, borderRadius: '50%', background: '#e8f7f1', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 500, color: '#0F6E56', flexShrink: 0 }}>
@@ -1844,6 +1848,154 @@ useEffect(() => {
 )
 }
 
+function KullaniciProfil({ kullanici, hedefId, geriDon }) {
+  const [profil, setProfil] = useState(null)
+  const [arkadasDurum, setArkadasDurum] = useState(null)
+  const [yukleniyor, setYukleniyor] = useState(true)
+  const [maclar, setMaclar] = useState([])
+
+  useEffect(() => {
+    const getir = async () => {
+      setYukleniyor(true)
+
+      const { data: profilData } = await supabase
+        .from('kullanicilar')
+        .select('*')
+        .eq('id', hedefId)
+        .single()
+      setProfil(profilData)
+
+      const { data: arkData } = await supabase
+        .from('arkadasliklar')
+        .select('*')
+        .or(`and(gonderen_id.eq.${kullanici.id},alici_id.eq.${hedefId}),and(gonderen_id.eq.${hedefId},alici_id.eq.${kullanici.id})`)
+        .single()
+      if (arkData) setArkadasDurum(arkData)
+
+      const { data: katilimData } = await supabase
+        .from('katilimlar')
+        .select('*, maclar(saha_adi, ilce, saat, format)')
+        .eq('kullanici_id', hedefId)
+        .eq('durum', 'onaylandi')
+        .order('olusturuldu', { ascending: false })
+        .limit(5)
+      setMaclar(katilimData || [])
+
+      setYukleniyor(false)
+    }
+    getir()
+  }, [hedefId, kullanici.id])
+
+  const arkadasEkle = async () => {
+    const { data } = await supabase.from('arkadasliklar').insert({
+      gonderen_id: kullanici.id,
+      alici_id: hedefId,
+    }).select().single()
+    if (data) setArkadasDurum(data)
+  }
+
+  const arkadasKabul = async () => {
+    await supabase.from('arkadasliklar').update({ durum: 'onaylandi' }).eq('id', arkadasDurum.id)
+    setArkadasDurum(prev => ({ ...prev, durum: 'onaylandi' }))
+  }
+
+  const pozisyonRenk = {
+    'Kaleci': { bg: '#fdecea', text: '#c0392b' },
+    'Defans': { bg: '#e8eef7', text: '#185FA5' },
+    'Orta saha': { bg: '#e8f7f1', text: '#0F6E56' },
+    'Forvet': { bg: '#fdf3e8', text: '#854F0B' },
+    'Belirtilmedi': { bg: '#f0f0ee', text: '#888' },
+  }
+
+  const benimProfil = hedefId === kullanici.id
+  const arkadaş = arkadasDurum?.durum === 'onaylandi'
+  const istekGonderildi = arkadasDurum?.durum === 'bekliyor' && arkadasDurum?.gonderen_id === kullanici.id
+  const istekAlindi = arkadasDurum?.durum === 'bekliyor' && arkadasDurum?.alici_id === kullanici.id
+
+  if (yukleniyor) return (
+    <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <p style={{ color: '#aaa' }}>Yükleniyor...</p>
+    </div>
+  )
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
+      <div style={{ padding: '14px 22px 0', flexShrink: 0 }}>
+        <span onClick={geriDon} style={{ fontSize: 24, color: '#1D9E75', cursor: 'pointer' }}>‹</span>
+      </div>
+
+      <div style={{ flex: 1, overflowY: 'auto' }}>
+        {/* Header */}
+        <div style={{ background: 'linear-gradient(to top, #0a7055 0%, #1D9E75 100%)', padding: '20px 22px 28px' }}>
+          <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
+            <div>
+              {profil?.avatar_url ? (
+                <img src={profil.avatar_url} style={{ width: 72, height: 72, borderRadius: '50%', objectFit: 'cover', border: '3px solid rgba(255,255,255,0.3)', marginBottom: 12 }} alt="avatar" />
+              ) : (
+                <div style={{ width: 72, height: 72, borderRadius: '50%', background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28, marginBottom: 12 }}>⚽</div>
+              )}
+              <p style={{ fontSize: 20, fontWeight: 700, color: '#fff', margin: '0 0 4px', letterSpacing: -0.3 }}>{profil?.isim || 'İsimsiz'}</p>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 8 }}>
+                {profil?.pozisyon && profil.pozisyon !== 'Belirtilmedi' && (
+                  <span style={{ background: 'rgba(255,255,255,0.2)', color: '#fff', fontSize: 12, padding: '4px 12px', borderRadius: 20 }}>{profil.pozisyon}</span>
+                )}
+                {profil?.seviye && (
+                  <span style={{ background: 'rgba(255,255,255,0.2)', color: '#fff', fontSize: 12, padding: '4px 12px', borderRadius: 20 }}>{profil.seviye} seviye</span>
+                )}
+              </div>
+            </div>
+
+            {!benimProfil && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {arkadaş ? (
+                  <span style={{ fontSize: 12, fontWeight: 600, padding: '8px 16px', borderRadius: 20, background: 'rgba(255,255,255,0.2)', color: '#fff' }}>✓ Arkadaş</span>
+                ) : istekGonderildi ? (
+                  <span style={{ fontSize: 12, fontWeight: 600, padding: '8px 16px', borderRadius: 20, background: 'rgba(255,255,255,0.2)', color: '#fff' }}>İstek gönderildi</span>
+                ) : istekAlindi ? (
+                  <button onClick={arkadasKabul} style={{ fontSize: 12, fontWeight: 600, padding: '8px 16px', borderRadius: 20, background: '#fff', color: '#1D9E75', border: 'none', cursor: 'pointer' }}>Kabul et ✓</button>
+                ) : (
+                  <button onClick={arkadasEkle} style={{ fontSize: 12, fontWeight: 600, padding: '8px 16px', borderRadius: 20, background: '#fff', color: '#1D9E75', border: 'none', cursor: 'pointer' }}>+ Arkadaş ekle</button>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div style={{ padding: '20px 22px' }}>
+          {/* Bio */}
+          {profil?.bio && (
+            <div style={{ background: '#fff', borderRadius: 16, padding: '14px 16px', marginBottom: 14, border: '0.5px solid #ebebE8' }}>
+              <p style={{ fontSize: 12, color: '#aaa', margin: '0 0 6px', fontWeight: 500 }}>Hakkında</p>
+              <p style={{ fontSize: 13, color: '#555', margin: 0, lineHeight: 1.6 }}>{profil.bio}</p>
+            </div>
+          )}
+
+          {/* Son maçlar */}
+          {maclar.length > 0 && (
+            <>
+              <p style={{ fontSize: 14, fontWeight: 600, margin: '0 0 12px', color: '#1a1a1a' }}>Son maçlar</p>
+              {maclar.map((k, i) => {
+                const tarih = new Date(k.maclar?.saat).toLocaleString('tr-TR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
+                return (
+                  <div key={i} style={{ background: '#fff', borderRadius: 14, padding: '12px 14px', marginBottom: 10, border: '0.5px solid #ebebE8', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                      <p style={{ fontSize: 13, fontWeight: 600, color: '#1a1a1a', margin: '0 0 3px', textTransform: 'capitalize' }}>{k.maclar?.saha_adi}</p>
+                      <p style={{ fontSize: 11, color: '#aaa', margin: 0 }}>{k.maclar?.ilce} · {tarih}</p>
+                    </div>
+                    <span style={{ fontSize: 11, fontWeight: 500, padding: '4px 10px', borderRadius: 20, background: '#f5f5f3', color: '#aaa' }}>
+                      {k.maclar?.format}
+                    </span>
+                  </div>
+                )
+              })}
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function ArkadaslarSayfa({ kullanici, geriDon }) {
   const [arkadaslar, setArkadaslar] = useState([])
   const [istekler, setIstekler] = useState([])
@@ -2094,6 +2246,15 @@ function OzelMesajSayfa({ kullanici, karsi, geriDon }) {
     </div>
   )
 }
+{hedefKullanici && (
+  <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: '#f8f8f6', zIndex: 50, display: 'flex', flexDirection: 'column' }}>
+    <KullaniciProfil
+      kullanici={kullanici}
+      hedefId={hedefKullanici}
+      geriDon={() => setHedefKullanici(null)}
+    />
+  </div>
+)}
 
 function AltNav({ aktifEkran, setAktifEkran, okunmamisSayisi }) {
     const items = [
