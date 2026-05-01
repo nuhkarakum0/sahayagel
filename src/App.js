@@ -145,6 +145,12 @@ export default function App() {
             {aktifEkran === 'profil' && (
               <ProfilSayfa kullanici={kullanici} setKullanici={setKullanici} geriDon={() => setAktifEkran('anasayfa')} />
             )}
+            {aktifEkran === 'arkadaslar' && (
+              <ArkadaslarSayfa
+                kullanici={kullanici}
+                geriDon={() => setAktifEkran('anasayfa')}
+              />
+            )}
             <AltNav aktifEkran={aktifEkran} setAktifEkran={setAktifEkran} okunmamisSayisi={okunmamisSayisi} />
           </>
         )}
@@ -880,7 +886,7 @@ const mesajGonder = async () => {
                 <>
                   <p style={{ fontSize: 12, color: '#aaa', fontWeight: 500, margin: '0 0 10px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Bekleyenler ({katilimlar.filter(k => k.durum === 'bekliyor').length})</p>
                   {katilimlar.filter(k => k.durum === 'bekliyor').map(k => (
-                    <KatilimciKart key={k.id} katilim={k} durumRenk={durumRenk} onOnayla={() => katilimGuncelle(k.id, 'onaylandi')} onReddet={() => katilimGuncelle(k.id, 'reddedildi')} gosterButon={true} />
+                  <KatilimciKart key={k.id} katilim={k} durumRenk={durumRenk} onOnayla={() => katilimGuncelle(k.id, 'onaylandi')} onReddet={() => katilimGuncelle(k.id, 'reddedildi')} gosterButon={true} kullanici={kullanici} />
                   ))}
                 </>
               )}
@@ -890,7 +896,7 @@ const mesajGonder = async () => {
                 <>
                   <p style={{ fontSize: 12, color: '#aaa', fontWeight: 500, margin: '16px 0 10px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Onaylananlar ({katilimlar.filter(k => k.durum === 'onaylandi').length})</p>
                   {katilimlar.filter(k => k.durum === 'onaylandi').map(k => (
-                    <KatilimciKart key={k.id} katilim={k} durumRenk={durumRenk} onReddet={() => katilimGuncelle(k.id, 'reddedildi')} gosterButon={false} />
+                  <KatilimciKart key={k.id} katilim={k} durumRenk={durumRenk} onOnayla={() => katilimGuncelle(k.id, 'onaylandi')} onReddet={() => katilimGuncelle(k.id, 'reddedildi')} gosterButon={true} kullanici={kullanici} />
                   ))}
                 </>
               )}
@@ -900,7 +906,7 @@ const mesajGonder = async () => {
                 <>
                   <p style={{ fontSize: 12, color: '#aaa', fontWeight: 500, margin: '16px 0 10px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Reddedilenler ({katilimlar.filter(k => k.durum === 'reddedildi').length})</p>
                   {katilimlar.filter(k => k.durum === 'reddedildi').map(k => (
-                    <KatilimciKart key={k.id} katilim={k} durumRenk={durumRenk} onOnayla={() => katilimGuncelle(k.id, 'onaylandi')} gosterButon={false} />
+                    <KatilimciKart key={k.id} katilim={k} durumRenk={durumRenk} onOnayla={() => katilimGuncelle(k.id, 'onaylandi')} onReddet={() => katilimGuncelle(k.id, 'reddedildi')} gosterButon={true} kullanici={kullanici} />
                   ))}
                 </>
               )}
@@ -989,9 +995,33 @@ const mesajGonder = async () => {
   )
 }
 
-function KatilimciKart({ katilim, durumRenk, onOnayla, onReddet, gosterButon }) {
+function KatilimciKart({ katilim, durumRenk, onOnayla, onReddet, gosterButon, kullanici }) {
   const renk = durumRenk[katilim.durum] || durumRenk['bekliyor']
   const baslarf = katilim.kullanicilar?.isim?.split(' ').map(s => s[0]).join('').slice(0, 2).toUpperCase() || '??'
+  const benimKartim = katilim.kullanici_id === kullanici?.id
+  const [arkadasDurum, setArkadasDurum] = useState(null)
+
+  useEffect(() => {
+    if (!kullanici || benimKartim) return
+    const kontrol = async () => {
+      const { data } = await supabase
+        .from('arkadasliklar')
+        .select('durum, gonderen_id')
+        .or(`gonderen_id.eq.${kullanici.id},alici_id.eq.${kullanici.id}`)
+        .or(`gonderen_id.eq.${katilim.kullanici_id},alici_id.eq.${katilim.kullanici_id}`)
+        .single()
+      if (data) setArkadasDurum(data)
+    }
+    kontrol()
+  }, [katilim.kullanici_id, kullanici])
+
+  const arkadasEkle = async () => {
+    await supabase.from('arkadasliklar').insert({
+      gonderen_id: kullanici.id,
+      alici_id: katilim.kullanici_id,
+    })
+    setArkadasDurum({ durum: 'bekliyor', gonderen_id: kullanici.id })
+  }
 
   return (
     <div style={{ background: '#fff', borderRadius: 14, padding: '12px 14px', marginBottom: 10, border: '0.5px solid #ebebE8' }}>
@@ -1009,9 +1039,20 @@ function KatilimciKart({ katilim, durumRenk, onOnayla, onReddet, gosterButon }) 
             {katilim.kullanicilar?.pozisyon || 'Pozisyon belirtilmedi'} · {katilim.kullanicilar?.seviye || 'Seviye belirtilmedi'}
           </p>
         </div>
-        <span style={{ fontSize: 11, fontWeight: 500, padding: '4px 10px', borderRadius: 20, background: renk.bg, color: renk.text, whiteSpace: 'nowrap' }}>
-          {renk.label}
-        </span>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-end' }}>
+          <span style={{ fontSize: 11, fontWeight: 500, padding: '4px 10px', borderRadius: 20, background: renk.bg, color: renk.text, whiteSpace: 'nowrap' }}>
+            {renk.label}
+          </span>
+          {!benimKartim && kullanici && (
+            <button onClick={arkadasEkle} disabled={!!arkadasDurum} style={{
+              fontSize: 11, fontWeight: 500, padding: '4px 10px', borderRadius: 20, border: 'none', cursor: arkadasDurum ? 'default' : 'pointer', whiteSpace: 'nowrap',
+              background: arkadasDurum?.durum === 'onaylandi' ? '#e8f7f1' : arkadasDurum?.durum === 'bekliyor' ? '#f5f5f3' : '#e8eef7',
+              color: arkadasDurum?.durum === 'onaylandi' ? '#0F6E56' : arkadasDurum?.durum === 'bekliyor' ? '#aaa' : '#185FA5',
+            }}>
+              {arkadasDurum?.durum === 'onaylandi' ? '✓ Arkadaş' : arkadasDurum?.durum === 'bekliyor' ? 'İstek gönderildi' : '+ Arkadaş ekle'}
+            </button>
+          )}
+        </div>
       </div>
 
       {gosterButon && katilim.durum === 'bekliyor' && (
@@ -1803,11 +1844,263 @@ useEffect(() => {
 )
 }
 
+function ArkadaslarSayfa({ kullanici, geriDon }) {
+  const [arkadaslar, setArkadaslar] = useState([])
+  const [istekler, setIstekler] = useState([])
+  const [aktifTab, setAktifTab] = useState('arkadaslar')
+  const [seciliArk, setSeciliArk] = useState(null)
+  const [yukleniyor, setYukleniyor] = useState(true)
+
+  useEffect(() => {
+    const getir = async () => {
+      setYukleniyor(true)
+      const { data } = await supabase
+        .from('arkadasliklar')
+        .select('*, gonderen:gonderen_id(id, isim, avatar_url, pozisyon, seviye), alici:alici_id(id, isim, avatar_url, pozisyon, seviye)')
+        .or(`gonderen_id.eq.${kullanici.id},alici_id.eq.${kullanici.id}`)
+
+      const onaylananlar = (data || []).filter(a => a.durum === 'onaylandi')
+      const bekleyenler = (data || []).filter(a => a.durum === 'bekliyor' && a.alici_id === kullanici.id)
+
+      setArkadaslar(onaylananlar)
+      setIstekler(bekleyenler)
+      setYukleniyor(false)
+    }
+    getir()
+  }, [kullanici.id])
+
+  const istekKabul = async (id) => {
+    await supabase.from('arkadasliklar').update({ durum: 'onaylandi' }).eq('id', id)
+    setIstekler(prev => prev.filter(i => i.id !== id))
+    const kabul = istekler.find(i => i.id === id)
+    if (kabul) setArkadaslar(prev => [...prev, { ...kabul, durum: 'onaylandi' }])
+  }
+
+  const istekReddet = async (id) => {
+    await supabase.from('arkadasliklar').delete().eq('id', id)
+    setIstekler(prev => prev.filter(i => i.id !== id))
+  }
+
+  if (seciliArk) return (
+    <OzelMesajSayfa
+      kullanici={kullanici}
+      karsi={seciliArk}
+      geriDon={() => setSeciliArk(null)}
+    />
+  )
+
+  const arkadasBilgi = (a) => a.gonderen_id === kullanici.id ? a.alici : a.gonderen
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
+      <div style={{ padding: '14px 22px 12px', borderBottom: '0.5px solid #ebebE8', flexShrink: 0, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <h2 style={{ fontSize: 20, fontWeight: 700, margin: 0, letterSpacing: -0.5 }}>Arkadaşlar</h2>
+      </div>
+
+      <div style={{ display: 'flex', borderBottom: '0.5px solid #ebebE8', flexShrink: 0 }}>
+        {[{ id: 'arkadaslar', label: `Arkadaşlar (${arkadaslar.length})` }, { id: 'istekler', label: `İstekler ${istekler.length > 0 ? `(${istekler.length})` : ''}` }].map(tab => (
+          <button key={tab.id} onClick={() => setAktifTab(tab.id)} style={{
+            flex: 1, padding: '11px 0', fontSize: 13, fontWeight: aktifTab === tab.id ? 600 : 400, border: 'none', background: 'none', cursor: 'pointer',
+            color: aktifTab === tab.id ? '#1D9E75' : '#aaa',
+            borderBottom: aktifTab === tab.id ? '2px solid #1D9E75' : '2px solid transparent',
+          }}>{tab.label}</button>
+        ))}
+      </div>
+
+      <div style={{ flex: 1, overflowY: 'auto', padding: '16px 22px' }}>
+        {yukleniyor ? (
+          <p style={{ color: '#aaa', textAlign: 'center', padding: '40px 0' }}>Yükleniyor...</p>
+        ) : aktifTab === 'arkadaslar' ? (
+          arkadaslar.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '40px 0' }}>
+              <p style={{ fontSize: 40, margin: '0 0 12px' }}>👥</p>
+              <p style={{ fontSize: 14, color: '#aaa' }}>Henüz arkadaşın yok</p>
+              <p style={{ fontSize: 13, color: '#bbb', marginTop: 4 }}>Maçlardaki oyunculardan arkadaş ekle</p>
+            </div>
+          ) : arkadaslar.map(a => {
+            const ark = arkadasBilgi(a)
+            return (
+              <div key={a.id} onClick={() => setSeciliArk(ark)} style={{ background: '#fff', borderRadius: 14, padding: '12px 14px', marginBottom: 10, border: '0.5px solid #ebebE8', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' }}>
+                {ark?.avatar_url ? (
+                  <img src={ark.avatar_url} style={{ width: 46, height: 46, borderRadius: '50%', objectFit: 'cover' }} alt="avatar" />
+                ) : (
+                  <div style={{ width: 46, height: 46, borderRadius: '50%', background: '#e8f7f1', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 600, color: '#0F6E56' }}>
+                    {ark?.isim?.slice(0, 2).toUpperCase() || '?'}
+                  </div>
+                )}
+                <div style={{ flex: 1 }}>
+                  <p style={{ fontSize: 14, fontWeight: 600, color: '#1a1a1a', margin: '0 0 3px' }}>{ark?.isim || 'İsimsiz'}</p>
+                  <p style={{ fontSize: 12, color: '#aaa', margin: 0 }}>{ark?.pozisyon || 'Pozisyon belirtilmedi'}</p>
+                </div>
+                <div style={{ fontSize: 13, color: '#1D9E75', fontWeight: 500 }}>Mesaj →</div>
+              </div>
+            )
+          })
+        ) : (
+          istekler.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '40px 0' }}>
+              <p style={{ fontSize: 40, margin: '0 0 12px' }}>📭</p>
+              <p style={{ fontSize: 14, color: '#aaa' }}>Bekleyen istek yok</p>
+            </div>
+          ) : istekler.map(i => {
+            const ark = i.gonderen
+            return (
+              <div key={i.id} style={{ background: '#fff', borderRadius: 14, padding: '12px 14px', marginBottom: 10, border: '0.5px solid #ebebE8' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+                  {ark?.avatar_url ? (
+                    <img src={ark.avatar_url} style={{ width: 46, height: 46, borderRadius: '50%', objectFit: 'cover' }} alt="avatar" />
+                  ) : (
+                    <div style={{ width: 46, height: 46, borderRadius: '50%', background: '#e8f7f1', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 600, color: '#0F6E56' }}>
+                      {ark?.isim?.slice(0, 2).toUpperCase() || '?'}
+                    </div>
+                  )}
+                  <div style={{ flex: 1 }}>
+                    <p style={{ fontSize: 14, fontWeight: 600, color: '#1a1a1a', margin: '0 0 3px' }}>{ark?.isim || 'İsimsiz'}</p>
+                    <p style={{ fontSize: 12, color: '#aaa', margin: 0 }}>{ark?.pozisyon || 'Pozisyon belirtilmedi'}</p>
+                  </div>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                  <button onClick={() => istekReddet(i.id)} style={{ padding: '8px', borderRadius: 10, border: 'none', background: '#fdecea', color: '#c0392b', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>Reddet</button>
+                  <button onClick={() => istekKabul(i.id)} style={{ padding: '8px', borderRadius: 10, border: 'none', background: '#e8f7f1', color: '#0F6E56', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>Kabul et ✓</button>
+                </div>
+              </div>
+            )
+          })
+        )}
+      </div>
+    </div>
+  )
+}
+
+function OzelMesajSayfa({ kullanici, karsi, geriDon }) {
+  const [mesajlar, setMesajlar] = useState([])
+  const [yeniMesaj, setYeniMesaj] = useState('')
+  const [gonderiyor, setGonderiyor] = useState(false)
+  const mesajSonuRef = useRef(null)
+
+  useEffect(() => {
+    const getir = async () => {
+      const { data } = await supabase
+        .from('ozel_mesajlar')
+        .select('*')
+        .or(`and(gonderen_id.eq.${kullanici.id},alici_id.eq.${karsi.id}),and(gonderen_id.eq.${karsi.id},alici_id.eq.${kullanici.id})`)
+        .order('olusturuldu', { ascending: true })
+      setMesajlar(data || [])
+    }
+    getir()
+
+    const kanal = supabase
+      .channel(`ozel-${kullanici.id}-${karsi.id}`)
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'ozel_mesajlar',
+      }, (payload) => {
+        if (
+          (payload.new.gonderen_id === kullanici.id && payload.new.alici_id === karsi.id) ||
+          (payload.new.gonderen_id === karsi.id && payload.new.alici_id === kullanici.id)
+        ) {
+          setMesajlar(prev => [...prev, payload.new])
+        }
+      })
+      .subscribe()
+
+    return () => supabase.removeChannel(kanal)
+  }, [kullanici.id, karsi.id])
+
+  useEffect(() => {
+    if (mesajSonuRef.current) {
+      mesajSonuRef.current.scrollIntoView({ behavior: 'auto' })
+    }
+  }, [mesajlar])
+
+  const gonder = async () => {
+    if (!yeniMesaj.trim() || gonderiyor) return
+    setGonderiyor(true)
+    const icerik = yeniMesaj.trim()
+    setYeniMesaj('')
+    await supabase.from('ozel_mesajlar').insert({
+      gonderen_id: kullanici.id,
+      alici_id: karsi.id,
+      icerik,
+    })
+    setGonderiyor(false)
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
+      <div style={{ padding: '14px 22px 12px', borderBottom: '0.5px solid #ebebE8', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 12 }}>
+        <span onClick={geriDon} style={{ fontSize: 24, color: '#1D9E75', cursor: 'pointer' }}>‹</span>
+        {karsi?.avatar_url ? (
+          <img src={karsi.avatar_url} style={{ width: 36, height: 36, borderRadius: '50%', objectFit: 'cover' }} alt="avatar" />
+        ) : (
+          <div style={{ width: 36, height: 36, borderRadius: '50%', background: '#e8f7f1', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 600, color: '#0F6E56' }}>
+            {karsi?.isim?.slice(0, 2).toUpperCase() || '?'}
+          </div>
+        )}
+        <p style={{ fontSize: 15, fontWeight: 600, margin: 0, color: '#1a1a1a' }}>{karsi?.isim || 'İsimsiz'}</p>
+      </div>
+
+      <div style={{ flex: 1, overflowY: 'auto', padding: '16px 22px', display: 'flex', flexDirection: 'column', gap: 12, background: '#f8f8f6' }}>
+        {mesajlar.length === 0 && (
+          <div style={{ textAlign: 'center', padding: '40px 0' }}>
+            <p style={{ fontSize: 32, margin: '0 0 10px' }}>💬</p>
+            <p style={{ fontSize: 13, color: '#aaa' }}>Henüz mesaj yok</p>
+          </div>
+        )}
+        {mesajlar.map((m, i) => {
+          const benim = m.gonderen_id === kullanici.id
+          const saat = new Date(m.olusturuldu).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })
+          return (
+            <div key={m.id} style={{ display: 'flex', flexDirection: benim ? 'row-reverse' : 'row', alignItems: 'flex-end', gap: 8 }}>
+              <div style={{ maxWidth: '72%', display: 'flex', flexDirection: 'column', alignItems: benim ? 'flex-end' : 'flex-start' }}>
+                <div style={{
+                  padding: '9px 13px',
+                  borderRadius: benim ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
+                  background: benim ? '#1D9E75' : '#fff',
+                  color: benim ? '#fff' : '#1a1a1a',
+                  fontSize: 14, lineHeight: 1.5,
+                  border: benim ? 'none' : '0.5px solid #ebebE8',
+                  boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
+                }}>
+                  {m.icerik}
+                </div>
+                <p style={{ fontSize: 10, color: '#bbb', margin: '4px 4px 0' }}>{saat}</p>
+              </div>
+            </div>
+          )
+        })}
+        <div ref={mesajSonuRef} />
+      </div>
+
+      <div style={{ padding: '10px 16px 16px', background: '#fff', borderTop: '0.5px solid #ebebE8', display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+        <input
+          value={yeniMesaj}
+          onChange={e => setYeniMesaj(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); gonder() } }}
+          placeholder="Mesaj yaz..."
+          style={{ flex: 1, background: '#f5f5f3', border: 'none', borderRadius: 20, padding: '10px 16px', fontSize: 14, outline: 'none', color: '#1a1a1a' }}
+        />
+        <button onClick={gonder} disabled={!yeniMesaj.trim() || gonderiyor} style={{
+          width: 38, height: 38, borderRadius: '50%', border: 'none', cursor: yeniMesaj.trim() ? 'pointer' : 'default',
+          background: yeniMesaj.trim() ? '#1D9E75' : '#e8e8e4',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+        }}>
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <path d="M14 8L2 2l3 6-3 6 12-6z" fill={yeniMesaj.trim() ? '#fff' : '#bbb'} />
+          </svg>
+        </button>
+      </div>
+    </div>
+  )
+}
+
 function AltNav({ aktifEkran, setAktifEkran, okunmamisSayisi }) {
     const items = [
     { id: 'anasayfa', label: 'Keşfet', path: <path d="M3 10L11 3l8 7v9a1 1 0 01-1 1H5a1 1 0 01-1-1v-9z" stroke="currentColor" strokeWidth="1.5" /> },
     { id: 'ilan', label: 'İlan aç', path: <><circle cx="11" cy="11" r="8" stroke="currentColor" strokeWidth="1.5" /><path d="M11 8v6M8 11h6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></> },
     { id: 'bildirim', label: 'Bildirim', badge: okunmamisSayisi, path: <><path d="M11 2a7 7 0 017 7v3l1.5 3H2.5L4 12V9a7 7 0 017-7z" stroke="currentColor" strokeWidth="1.5" /><path d="M9 18a2 2 0 004 0" stroke="currentColor" strokeWidth="1.5" /></> },
+    { id: 'arkadaslar', label: 'Arkadaşlar', badge: 0, path: <><circle cx="8" cy="7" r="3" stroke="currentColor" strokeWidth="1.5"/><circle cx="16" cy="7" r="3" stroke="currentColor" strokeWidth="1.5"/><path d="M2 19c0-3 2.5-5 6-5M12 19c0-3 2.5-5 6-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></> },
     { id: 'profil', label: 'Profil', path: <><circle cx="11" cy="8" r="3.5" stroke="currentColor" strokeWidth="1.5" /><path d="M4 19c0-3.866 3.134-6 7-6s7 2.134 7 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></> },
   ]
   return (
