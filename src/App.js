@@ -163,6 +163,7 @@ export default function App() {
                   kullanici={kullanici}
                   karsi={seciliOzelMesaj}
                   geriDon={() => setSeciliOzelMesaj(null)}
+                  onKullaniciTikla={onKullaniciTikla}
                 />
               </div>
             )}
@@ -295,8 +296,11 @@ function AnaSayfa({ kullanici, macaGit, onMaclarYuklendi, setAktifEkran }) {
   const [ilceFiltre, setIlceFiltre] = useState('Tümü')
   const [saatFiltre, setSaatFiltre] = useState('Tümü')
   const [filtrePanelAcik, setFiltrePanelAcik] = useState(false)
+  const [ilFiltre, setIlFiltre] = useState('Tümü')
+  const [formatFiltre, setFormatFiltre] = useState('Tümü')
+  const [seviyeFiltre, setSeviyeFiltre] = useState('Tümü')
 
-  const filtreler = ['Tümü', 'Bu akşam', '11v11', '7v7', '5v5']
+  const filtreler = ['Tümü', 'Bu akşam']
   const saatSecenekleri = ['Tümü', 'Bugün', 'Bu hafta', 'Bu akşam', 'Yarın']
 
   const maclariGetir = async () => {
@@ -319,6 +323,7 @@ function AnaSayfa({ kullanici, macaGit, onMaclarYuklendi, setAktifEkran }) {
     if (aktifFiltre !== 'Tümü' && aktifFiltre !== 'Bu akşam') {
       if (m.format !== aktifFiltre) return false
     }
+    
     if (aktifFiltre === 'Bu akşam') {
       const bugun = new Date()
       const mac = new Date(m.saat)
@@ -358,11 +363,19 @@ function AnaSayfa({ kullanici, macaGit, onMaclarYuklendi, setAktifEkran }) {
       }
     }
 
+    // İl filtresi
+if (ilFiltre !== 'Tümü' && m.il !== ilFiltre) return false
+
+// Format filtresi (yeni)
+if (formatFiltre !== 'Tümü' && m.format !== formatFiltre) return false
+
+// Seviye filtresi
+if (seviyeFiltre !== 'Tümü' && m.seviye !== seviyeFiltre) return false
+
     return true
   })
 
-  const aktifFiltreVar = ilceFiltre !== 'Tümü' || saatFiltre !== 'Tümü'
-
+const aktifFiltreVar = ilceFiltre !== 'Tümü' || saatFiltre !== 'Tümü' || ilFiltre !== 'Tümü' || formatFiltre !== 'Tümü' || seviyeFiltre !== 'Tümü'
   return (
     <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
 
@@ -428,35 +441,81 @@ function AnaSayfa({ kullanici, macaGit, onMaclarYuklendi, setAktifEkran }) {
       )}
 
       {/* Filtre paneli */}
-      {filtrePanelAcik && (
-        <div style={{ margin: '10px 22px 0', background: '#fff', borderRadius: 16, padding: '14px 16px', border: '0.5px solid #ebebE8', flexShrink: 0 }}>
-          <p style={{ fontSize: 12, color: '#aaa', fontWeight: 500, margin: '0 0 10px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>İlçe</p>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 14 }}>
-            {ilceler.map(i => (
-              <button key={i} onClick={() => setIlceFiltre(i)} style={{
-                padding: '5px 12px', borderRadius: 20, fontSize: 12, fontWeight: 500, cursor: 'pointer', border: 'none',
-                background: ilceFiltre === i ? '#1D9E75' : '#f5f5f3',
-                color: ilceFiltre === i ? '#fff' : '#666',
-              }}>{i}</button>
-            ))}
-          </div>
-          <p style={{ fontSize: 12, color: '#aaa', fontWeight: 500, margin: '0 0 10px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Zaman</p>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 10 }}>
-            {saatSecenekleri.map(s => (
-              <button key={s} onClick={() => setSaatFiltre(s)} style={{
-                padding: '5px 12px', borderRadius: 20, fontSize: 12, fontWeight: 500, cursor: 'pointer', border: 'none',
-                background: saatFiltre === s ? '#1D9E75' : '#f5f5f3',
-                color: saatFiltre === s ? '#fff' : '#666',
-              }}>{s}</button>
-            ))}
-          </div>
-          {aktifFiltreVar && (
-            <button onClick={() => { setIlceFiltre('Tümü'); setSaatFiltre('Tümü') }} style={{ fontSize: 12, color: '#e74c3c', background: 'none', border: 'none', cursor: 'pointer', padding: '4px 0', fontWeight: 500 }}>
-              Filtreleri temizle
-            </button>
-          )}
+     {filtrePanelAcik && (
+  <div style={{ margin: '10px 22px 0', background: '#fff', borderRadius: 16, padding: '16px 16px', border: '0.5px solid #ebebE8', flexShrink: 0, boxShadow: '0 2px 12px rgba(0,0,0,0.08)' }}>
+    
+    {/* İl */}
+    <p style={{ fontSize: 11, color: '#aaa', fontWeight: 600, margin: '0 0 8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>İl</p>
+    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 14 }}>
+      {['Tümü', 'İstanbul', 'Ankara', 'İzmir', 'Bursa', 'Antalya'].map(i => (
+        <button key={i} onClick={() => setIlFiltre(i)} style={{
+          padding: '5px 12px', borderRadius: 20, fontSize: 12, fontWeight: 500, cursor: 'pointer', border: 'none',
+          background: ilFiltre === i ? '#1D9E75' : '#f5f5f3',
+          color: ilFiltre === i ? '#fff' : '#666',
+        }}>{i}</button>
+      ))}
+    </div>
+
+    {/* İlçe */}
+    {ilFiltre !== 'Tümü' && (
+      <>
+        <p style={{ fontSize: 11, color: '#aaa', fontWeight: 600, margin: '0 0 8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>İlçe</p>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 14 }}>
+          {['Tümü', ...new Set((maclar || []).filter(m => m.il === ilFiltre || ilFiltre === 'Tümü').map(m => m.ilce).filter(Boolean))].map(i => (
+            <button key={i} onClick={() => setIlceFiltre(i)} style={{
+              padding: '5px 12px', borderRadius: 20, fontSize: 12, fontWeight: 500, cursor: 'pointer', border: 'none',
+              background: ilceFiltre === i ? '#1D9E75' : '#f5f5f3',
+              color: ilceFiltre === i ? '#fff' : '#666',
+            }}>{i}</button>
+          ))}
         </div>
-      )}
+      </>
+    )}
+
+    {/* Zaman */}
+    <p style={{ fontSize: 11, color: '#aaa', fontWeight: 600, margin: '0 0 8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Zaman</p>
+    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 14 }}>
+      {['Tümü', 'Bugün', 'Bu akşam', 'Yarın', 'Bu hafta'].map(s => (
+        <button key={s} onClick={() => setSaatFiltre(s)} style={{
+          padding: '5px 12px', borderRadius: 20, fontSize: 12, fontWeight: 500, cursor: 'pointer', border: 'none',
+          background: saatFiltre === s ? '#1D9E75' : '#f5f5f3',
+          color: saatFiltre === s ? '#fff' : '#666',
+        }}>{s}</button>
+      ))}
+    </div>
+
+    {/* Kaça Kaç */}
+    <p style={{ fontSize: 11, color: '#aaa', fontWeight: 600, margin: '0 0 8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Kaça Kaç?</p>
+    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 14 }}>
+      {['Tümü', '3v3', '4v4', '5v5', '6v6', '7v7', '8v8', '9v9', '10v10', '11v11'].map(f => (
+        <button key={f} onClick={() => setFormatFiltre(f)} style={{
+          padding: '5px 12px', borderRadius: 20, fontSize: 12, fontWeight: 500, cursor: 'pointer', border: 'none',
+          background: formatFiltre === f ? '#1D9E75' : '#f5f5f3',
+          color: formatFiltre === f ? '#fff' : '#666',
+        }}>{f}</button>
+      ))}
+    </div>
+
+    {/* Seviye */}
+    <p style={{ fontSize: 11, color: '#aaa', fontWeight: 600, margin: '0 0 8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Seviye</p>
+    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 14 }}>
+      {['Tümü', 'Amatör', 'Orta', 'İyi'].map(s => (
+        <button key={s} onClick={() => setSeviyeFiltre(s)} style={{
+          padding: '5px 12px', borderRadius: 20, fontSize: 12, fontWeight: 500, cursor: 'pointer', border: 'none',
+          background: seviyeFiltre === s ? '#1D9E75' : '#f5f5f3',
+          color: seviyeFiltre === s ? '#fff' : '#666',
+        }}>{s}</button>
+      ))}
+    </div>
+
+    {/* Temizle */}
+    {aktifFiltreVar && (
+      <button onClick={() => { setIlFiltre('Tümü'); setIlceFiltre('Tümü'); setSaatFiltre('Tümü'); setFormatFiltre('Tümü'); setSeviyeFiltre('Tümü') }} style={{ fontSize: 12, color: '#e74c3c', background: 'none', border: 'none', cursor: 'pointer', padding: '4px 0', fontWeight: 600 }}>
+        Filtreleri temizle
+      </button>
+    )}
+  </div>
+)}
 
       {/* Format filtreleri */}
       <div style={{ display: 'flex', gap: 8, padding: '12px 22px 0', overflowX: 'auto', flexShrink: 0 }}>
@@ -1951,82 +2010,127 @@ function KullaniciProfil({ kullanici, hedefId, geriDon, onMesajAc }) {
   )
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
-      <div style={{ padding: '14px 22px 0', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 10 }}>
-        <span onClick={geriDon} style={{ fontSize: 28, color: '#1D9E75', cursor: 'pointer', fontWeight: 600 }}>‹</span>
-       <span style={{ fontSize: 15, fontWeight: 600, color: '#1a1a1a' }}>Profil</span>
-      </div>
+  <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
+    
+    {/* Header bar */}
+    <div style={{ padding: '14px 22px 0', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 10 }}>
+      <span onClick={geriDon} style={{ fontSize: 28, color: '#1D9E75', cursor: 'pointer', fontWeight: 600 }}>‹</span>
+      <span style={{ fontSize: 15, fontWeight: 600, color: '#1a1a1a' }}>Profil</span>
+    </div>
 
-      <div style={{ flex: 1, overflowY: 'auto' }}>
-        {/* Header */}
-        <div style={{ background: 'linear-gradient(to top, #0a7055 0%, #1D9E75 100%)', padding: '20px 22px 28px' }}>
-          <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
-            <div>
-              {profil?.avatar_url ? (
-                <img src={profil.avatar_url} style={{ width: 72, height: 72, borderRadius: '50%', objectFit: 'cover', border: '3px solid rgba(255,255,255,0.3)', marginBottom: 12 }} alt="avatar" />
-              ) : (
-                <div style={{ width: 72, height: 72, borderRadius: '50%', background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28, marginBottom: 12 }}>⚽</div>
-              )}
-              <p style={{ fontSize: 20, fontWeight: 700, color: '#fff', margin: '0 0 4px', letterSpacing: -0.3 }}>{profil?.isim || 'İsimsiz'}</p>
-              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 8 }}>
-                {profil?.pozisyon && profil.pozisyon !== 'Belirtilmedi' && (
-                  <span style={{ background: 'rgba(255,255,255,0.2)', color: '#fff', fontSize: 12, padding: '4px 12px', borderRadius: 20 }}>{profil.pozisyon}</span>
-                )}
-                {profil?.seviye && (
-                  <span style={{ background: 'rgba(255,255,255,0.2)', color: '#fff', fontSize: 12, padding: '4px 12px', borderRadius: 20 }}>{profil.seviye} seviye</span>
-                )}
-              </div>
-            </div>
+    <div style={{ flex: 1, overflowY: 'auto' }}>
 
-            {!benimProfil && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-               {arkadaş ? (
-                  <button onClick={() => onMesajAc && onMesajAc(profil)} style={{ fontSize: 12, fontWeight: 600, padding: '8px 16px', borderRadius: 20, background: '#fff', color: '#1D9E75', border: 'none', cursor: 'pointer' }}>💬 Mesaj gönder</button>
-                  ) : istekGonderildi ? (
-                  <span style={{ fontSize: 12, fontWeight: 600, padding: '8px 16px', borderRadius: 20, background: 'rgba(255,255,255,0.2)', color: '#fff' }}>İstek gönderildi</span>
-                ) : istekAlindi ? (
-                  <button onClick={arkadasKabul} style={{ fontSize: 12, fontWeight: 600, padding: '8px 16px', borderRadius: 20, background: '#fff', color: '#1D9E75', border: 'none', cursor: 'pointer' }}>Kabul et ✓</button>
-                ) : (
-                  <button onClick={arkadasEkle} style={{ fontSize: 12, fontWeight: 600, padding: '8px 16px', borderRadius: 20, background: '#fff', color: '#1D9E75', border: 'none', cursor: 'pointer' }}>+ Arkadaş ekle</button>
-                )}
-              </div>
+      {/* Hero */}
+      <div style={{ background: 'linear-gradient(to bottom, #1D9E75, #0a7055)', padding: '24px 22px 32px', position: 'relative', overflow: 'hidden' }}>
+        {/* Dekoratif çember */}
+        <div style={{ position: 'absolute', top: -40, right: -40, width: 180, height: 180, borderRadius: '50%', border: '1.5px solid rgba(255,255,255,0.1)' }} />
+        <div style={{ position: 'absolute', bottom: -30, left: -20, width: 120, height: 120, borderRadius: '50%', border: '1.5px solid rgba(255,255,255,0.1)' }} />
+
+        <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start', position: 'relative', zIndex: 1 }}>
+          {/* Avatar */}
+          <div style={{ flexShrink: 0 }}>
+            {profil?.avatar_url ? (
+              <img src={profil.avatar_url} style={{ width: 80, height: 80, borderRadius: '50%', objectFit: 'cover', border: '3px solid rgba(255,255,255,0.4)' }} alt="avatar" />
+            ) : (
+              <div style={{ width: 80, height: 80, borderRadius: '50%', background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 32, border: '3px solid rgba(255,255,255,0.3)' }}>⚽</div>
             )}
+          </div>
+
+          {/* Bilgi */}
+          <div style={{ flex: 1 }}>
+            <p style={{ fontSize: 22, fontWeight: 700, color: '#fff', margin: '0 0 6px', letterSpacing: -0.5 }}>{profil?.isim || 'İsimsiz'}</p>
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+              {profil?.pozisyon && profil.pozisyon !== 'Belirtilmedi' && (
+                <span style={{ background: 'rgba(255,255,255,0.2)', color: '#fff', fontSize: 11, padding: '3px 10px', borderRadius: 20, fontWeight: 500 }}>{profil.pozisyon}</span>
+              )}
+              {profil?.seviye && (
+                <span style={{ background: 'rgba(255,255,255,0.2)', color: '#fff', fontSize: 11, padding: '3px 10px', borderRadius: 20, fontWeight: 500 }}>{profil.seviye}</span>
+              )}
+            </div>
           </div>
         </div>
 
-        <div style={{ padding: '20px 22px' }}>
-          {/* Bio */}
-          {profil?.bio && (
-            <div style={{ background: '#fff', borderRadius: 16, padding: '14px 16px', marginBottom: 14, border: '0.5px solid #ebebE8' }}>
-              <p style={{ fontSize: 12, color: '#aaa', margin: '0 0 6px', fontWeight: 500 }}>Hakkında</p>
-              <p style={{ fontSize: 13, color: '#555', margin: 0, lineHeight: 1.6 }}>{profil.bio}</p>
-            </div>
-          )}
+        {/* Aksiyon butonları */}
+        {!benimProfil && (
+          <div style={{ display: 'flex', gap: 8, marginTop: 16, position: 'relative', zIndex: 1 }}>
+            {arkadaş ? (
+              <button onClick={() => onMesajAc && onMesajAc(profil)} style={{ flex: 1, padding: '10px', borderRadius: 12, background: '#fff', color: '#1D9E75', border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>
+                💬 Mesaj gönder
+              </button>
+            ) : istekGonderildi ? (
+              <div style={{ flex: 1, padding: '10px', borderRadius: 12, background: 'rgba(255,255,255,0.15)', color: '#fff', textAlign: 'center', fontSize: 13, fontWeight: 500 }}>
+                ⏳ İstek gönderildi
+              </div>
+            ) : istekAlindi ? (
+              <button onClick={arkadasKabul} style={{ flex: 1, padding: '10px', borderRadius: 12, background: '#fff', color: '#1D9E75', border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>
+                ✓ Arkadaşlığı kabul et
+              </button>
+            ) : (
+              <>
+                <button onClick={arkadasEkle} style={{ flex: 1, padding: '10px', borderRadius: 12, background: 'rgba(255,255,255,0.2)', color: '#fff', border: '1px solid rgba(255,255,255,0.3)', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>
+                  + Arkadaş ekle
+                </button>
+              </>
+            )}
+          </div>
+        )}
+      </div>
 
-          {/* Son maçlar */}
-          {maclar.length > 0 && (
-            <>
-              <p style={{ fontSize: 14, fontWeight: 600, margin: '0 0 12px', color: '#1a1a1a' }}>Son maçlar</p>
-              {maclar.map((k, i) => {
-                const tarih = new Date(k.maclar?.saat).toLocaleString('tr-TR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
-                return (
-                  <div key={i} style={{ background: '#fff', borderRadius: 14, padding: '12px 14px', marginBottom: 10, border: '0.5px solid #ebebE8', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div>
-                      <p style={{ fontSize: 13, fontWeight: 600, color: '#1a1a1a', margin: '0 0 3px', textTransform: 'capitalize' }}>{k.maclar?.saha_adi}</p>
-                      <p style={{ fontSize: 11, color: '#aaa', margin: 0 }}>{k.maclar?.ilce} · {tarih}</p>
-                    </div>
-                    <span style={{ fontSize: 11, fontWeight: 500, padding: '4px 10px', borderRadius: 20, background: '#f5f5f3', color: '#aaa' }}>
-                      {k.maclar?.format}
-                    </span>
+      {/* İstatistikler */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, padding: '16px 22px 0' }}>
+        {[
+          { sayi: maclar.length, label: 'Maç' },
+          { sayi: profil?.pozisyon !== 'Belirtilmedi' ? profil?.pozisyon || '—' : '—', label: 'Pozisyon', kucuk: true },
+          { sayi: profil?.seviye || '—', label: 'Seviye', kucuk: true },
+        ].map((s, i) => (
+          <div key={i} style={{ background: '#fff', borderRadius: 14, padding: '12px 10px', textAlign: 'center', border: '0.5px solid #ebebE8', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
+            <p style={{ fontSize: s.kucuk ? 14 : 24, fontWeight: 700, color: '#1D9E75', margin: '0 0 4px', letterSpacing: -0.3 }}>{s.sayi}</p>
+            <p style={{ fontSize: 11, color: '#aaa', margin: 0 }}>{s.label}</p>
+          </div>
+        ))}
+      </div>
+
+      <div style={{ padding: '16px 22px' }}>
+
+        {/* Bio */}
+        {profil?.bio && (
+          <div style={{ background: '#fff', borderRadius: 16, padding: '14px 16px', marginBottom: 14, border: '0.5px solid #ebebE8' }}>
+            <p style={{ fontSize: 12, color: '#aaa', margin: '0 0 6px', fontWeight: 500 }}>Hakkında</p>
+            <p style={{ fontSize: 13, color: '#555', margin: 0, lineHeight: 1.6 }}>{profil.bio}</p>
+          </div>
+        )}
+
+        {/* Son maçlar */}
+        {maclar.length > 0 ? (
+          <>
+            <p style={{ fontSize: 14, fontWeight: 600, margin: '0 0 12px', color: '#1a1a1a' }}>Son maçlar</p>
+            {maclar.map((k, i) => {
+              const gecti = new Date(k.maclar?.saat) < new Date()
+              const tarih = new Date(k.maclar?.saat).toLocaleString('tr-TR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
+              return (
+                <div key={i} style={{ background: '#fff', borderRadius: 14, padding: '12px 14px', marginBottom: 10, border: '0.5px solid #ebebE8', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <p style={{ fontSize: 13, fontWeight: 600, color: '#1a1a1a', margin: '0 0 3px', textTransform: 'capitalize' }}>{k.maclar?.saha_adi}</p>
+                    <p style={{ fontSize: 11, color: '#aaa', margin: 0 }}>{k.maclar?.ilce} · {tarih}</p>
                   </div>
-                )
-              })}
-            </>
-          )}
-        </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
+                    <span style={{ fontSize: 11, fontWeight: 500, padding: '3px 10px', borderRadius: 20, background: '#f5f5f3', color: '#888' }}>{k.maclar?.format}</span>
+                    <span style={{ fontSize: 10, color: gecti ? '#aaa' : '#1D9E75', fontWeight: 500 }}>{gecti ? 'Oynandı' : 'Yaklaşıyor'}</span>
+                  </div>
+                </div>
+              )
+            })}
+          </>
+        ) : (
+          <div style={{ textAlign: 'center', padding: '30px 0' }}>
+            <p style={{ fontSize: 32, margin: '0 0 10px' }}>⚽</p>
+            <p style={{ fontSize: 13, color: '#aaa' }}>Henüz maç yok</p>
+          </div>
+        )}
       </div>
     </div>
-  )
+  </div>
+)
 }
 
 function ArkadaslarSayfa({ kullanici, geriDon, onKullaniciTikla }) {
@@ -2071,6 +2175,7 @@ function ArkadaslarSayfa({ kullanici, geriDon, onKullaniciTikla }) {
       kullanici={kullanici}
       karsi={seciliArk}
       geriDon={() => setSeciliArk(null)}
+      onKullaniciTikla={onKullaniciTikla}
     />
   )
 
@@ -2242,16 +2347,18 @@ const gonder = async () => {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
       <div style={{ padding: '14px 22px 12px', borderBottom: '0.5px solid #ebebE8', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 12 }}>
-        <span onClick={geriDon} style={{ fontSize: 24, color: '#1D9E75', cursor: 'pointer' }}>‹</span>
-        {karsi?.avatar_url ? (
-          <img src={karsi.avatar_url} style={{ width: 36, height: 36, borderRadius: '50%', objectFit: 'cover' }} alt="avatar" />
-        ) : (
-          <div style={{ width: 36, height: 36, borderRadius: '50%', background: '#e8f7f1', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 600, color: '#0F6E56' }}>
-            {karsi?.isim?.slice(0, 2).toUpperCase() || '?'}
-          </div>
-        )}
-        <p style={{ fontSize: 15, fontWeight: 600, margin: 0, color: '#1a1a1a' }}>{karsi?.isim || 'İsimsiz'}</p>
-      </div>
+       <span onClick={geriDon} style={{ fontSize: 24, color: '#1D9E75', cursor: 'pointer' }}>‹</span>
+        <div onClick={() => onKullaniciTikla && onKullaniciTikla(karsi.id)} style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', flex: 1 }}>
+          {karsi?.avatar_url ? (
+            <img src={karsi.avatar_url} style={{ width: 36, height: 36, borderRadius: '50%', objectFit: 'cover' }} alt="avatar" />
+          ) : (
+            <div style={{ width: 36, height: 36, borderRadius: '50%', background: '#e8f7f1', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 600, color: '#0F6E56' }}>
+              {karsi?.isim?.slice(0, 2).toUpperCase() || '?'}
+            </div>
+          )}
+          <p style={{ fontSize: 15, fontWeight: 600, margin: 0, color: '#1a1a1a' }}>{karsi?.isim || 'İsimsiz'}</p>
+        </div>
+  </div>
 
       <div style={{ flex: 1, overflowY: 'auto', padding: '16px 22px', display: 'flex', flexDirection: 'column', gap: 12, background: '#f8f8f6' }}>
         {mesajlar.length === 0 && (
