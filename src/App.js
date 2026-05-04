@@ -360,7 +360,7 @@ function AnaSayfa({ kullanici, macaGit, onMaclarYuklendi, setAktifEkran }) {
 useEffect(() => {
   const timer = setInterval(() => {
     setAktifSlide(prev => (prev + 1) % 3)
-  }, 3000)
+  }, 5000)
   return () => clearInterval(timer)
 }, [])
 // eslint-disable-next-line react-hooks/exhaustive-deps
