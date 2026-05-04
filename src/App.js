@@ -1797,6 +1797,9 @@ function ProfilSayfa({ kullanici, setKullanici, onDegerlendirmeAc }) {
   const [aktifProfilTab, setAktifProfilTab] = useState('ilanlar')
   const [ilanGoster, setIlanGoster] = useState(4)
   const [macGoster, setMacGoster] = useState(4)
+  const [yorumlar, setYorumlar] = useState([])
+  const [yorumGoster, setYorumGoster] = useState(2)
+  
 
   const pozisyonlar = ['Kaleci', 'Defans', 'Orta saha', 'Forvet', 'Belirtilmedi']
   const seviyeler = ['Amatör', 'Orta', 'İyi', 'Profesyonel']
@@ -1819,6 +1822,7 @@ function ProfilSayfa({ kullanici, setKullanici, onDegerlendirmeAc }) {
 
   useEffect(() => {
     const profilGetir = async () => {
+      console.log('kullanici id:', kullanici.id)  
       setYukleniyor(true)
       const { data: profilData } = await supabase
         .from('kullanicilar')
@@ -1864,6 +1868,19 @@ const { data: degerData } = await supabase
   .select('mac_id')
   .eq('degerlendiren_id', kullanici.id)
 setDegerlendirilenMaclar((degerData || []).map(d => d.mac_id))
+
+const { data: yorumData } = await supabase  
+  .from('degerlendirmeler')
+  .select('yorum, degerlendiren:degerlendiren_id(isim, avatar_url), guvenilirlik, beceri, takim_ruhu')
+  .eq('degerlendirilen_id', kullanici.id)
+  .not('yorum', 'is', null)
+  .neq('yorum', '')
+  .order('olusturuldu', { ascending: false })
+  .limit(10)
+  console.log('yorumlar:', yorumData)
+  
+
+setYorumlar(yorumData || [])
       
     }
     profilGetir()
@@ -2172,7 +2189,29 @@ if (seciliMac) return (
     )}
   </>
 )}
-
+{yorumlar.length > 0 && (
+  <>
+    <p style={{ fontSize: 14, fontWeight: 600, margin: '16px 0 12px', color: '#1a1a1a' }}>Hakkımdaki yorumlar</p>
+    {yorumlar.slice(0, yorumGoster).map((y, i) => (
+      <div key={i} style={{ background: '#fff', borderRadius: 14, padding: '12px 14px', marginBottom: 10, border: '0.5px solid #ebebE8' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+          {y.degerlendiren?.avatar_url
+            ? <img src={y.degerlendiren.avatar_url} style={{ width: 28, height: 28, borderRadius: '50%', objectFit: 'cover' }} alt="" />
+            : <div style={{ width: 28, height: 28, borderRadius: '50%', background: '#e8f7f1', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, color: '#0F6E56' }}>{y.degerlendiren?.isim?.slice(0,1)}</div>
+          }
+          <span style={{ fontSize: 13, fontWeight: 600, color: '#1a1a1a' }}>{y.degerlendiren?.isim}</span>
+          <span style={{ fontSize: 11, color: '#aaa', marginLeft: 'auto' }}>⭐ {((y.guvenilirlik + y.beceri + y.takim_ruhu) / 3).toFixed(1)}</span>
+        </div>
+        <p style={{ fontSize: 13, color: '#555', margin: 0, lineHeight: 1.5 }}>{y.yorum}</p>
+      </div>
+    ))}
+    {yorumlar.length > yorumGoster && (
+  <button onClick={() => setYorumGoster(yorumlar.length)} style={{ fontSize: 13, color: '#1D9E75', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 500, padding: '4px 0' }}>
+    Tümünü gör ({yorumlar.length - yorumGoster} yorum daha)
+  </button>
+)}
+  </>
+)}
           {!duzenle && (
             <button onClick={cikisYap} style={{ width: '100%', padding: 14, background: '#fdecea', color: '#c0392b', border: 'none', borderRadius: 14, fontSize: 14, fontWeight: 500, cursor: 'pointer', marginTop: 10 }}>
               Çıkış yap
@@ -2586,6 +2625,7 @@ function KullaniciProfil({ kullanici, hedefId, geriDon, onMesajAc, onKullaniciTi
   const [yukleniyor, setYukleniyor] = useState(true)
   const [maclar, setMaclar] = useState([])
   const [yorumlar, setYorumlar] = useState([])
+  const [yorumGoster, setYorumGoster] = useState(2)
 
 
   useEffect(() => {
@@ -2786,7 +2826,7 @@ function KullaniciProfil({ kullanici, hedefId, geriDon, onMesajAc, onKullaniciTi
         {yorumlar.length > 0 && (
   <>
     <p style={{ fontSize: 14, fontWeight: 600, margin: '16px 0 12px', color: '#1a1a1a' }}>Yorumlar</p>
-    {yorumlar.map((y, i) => (
+    {yorumlar.slice(0, yorumGoster).map((y, i) => (
       <div key={i} style={{ background: '#fff', borderRadius: 14, padding: '12px 14px', marginBottom: 10, border: '0.5px solid #ebebE8' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
           {y.degerlendiren?.avatar_url
@@ -2799,6 +2839,11 @@ function KullaniciProfil({ kullanici, hedefId, geriDon, onMesajAc, onKullaniciTi
         <p style={{ fontSize: 13, color: '#555', margin: 0, lineHeight: 1.5 }}>{y.yorum}</p>
       </div>
     ))}
+    {yorumlar.length > yorumGoster && (
+  <button onClick={() => setYorumGoster(yorumlar.length)} style={{ fontSize: 13, color: '#1D9E75', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 500, padding: '4px 0' }}>
+    Tümünü gör ({yorumlar.length - yorumGoster} yorum daha)
+  </button>
+)}
   </>
 )}
       </div>
@@ -2813,6 +2858,7 @@ function ArkadaslarSayfa({ kullanici, geriDon, onKullaniciTikla }) {
   const [aktifTab, setAktifTab] = useState('arkadaslar')
   const [seciliArk, setSeciliArk] = useState(null)
   const [yukleniyor, setYukleniyor] = useState(true)
+  const [arama, setArama] = useState('')
 
   useEffect(() => {
     const getir = async () => {
@@ -2873,6 +2919,21 @@ function ArkadaslarSayfa({ kullanici, geriDon, onKullaniciTikla }) {
           }}>{tab.label}</button>
         ))}
       </div>
+      <div style={{ padding: '12px 22px', borderBottom: '0.5px solid #ebebE8', flexShrink: 0 }}>
+  <div style={{ background: '#f5f5f3', borderRadius: 12, padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 8 }}>
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+      <circle cx="7" cy="7" r="5" stroke="#aaa" strokeWidth="1.4" />
+      <path d="M11 11l2.5 2.5" stroke="#aaa" strokeWidth="1.4" strokeLinecap="round" />
+    </svg>
+    <input
+      placeholder="Arkadaş ara..."
+      value={arama}
+      onChange={e => setArama(e.target.value)}
+      style={{ border: 'none', outline: 'none', fontSize: 14, color: '#1a1a1a', background: 'none', flex: 1 }}
+    />
+    {arama && <span onClick={() => setArama('')} style={{ fontSize: 18, color: '#bbb', cursor: 'pointer' }}>×</span>}
+  </div>
+</div>
 
       <div style={{ flex: 1, overflowY: 'auto', padding: '16px 22px' }}>
         {yukleniyor ? (
@@ -2884,30 +2945,40 @@ function ArkadaslarSayfa({ kullanici, geriDon, onKullaniciTikla }) {
               <p style={{ fontSize: 14, color: '#aaa' }}>Henüz arkadaşın yok</p>
               <p style={{ fontSize: 13, color: '#bbb', marginTop: 4 }}>Maçlardaki oyunculardan arkadaş ekle</p>
             </div>
-          ) : arkadaslar.map(a => {
+          ) : arkadaslar.filter(a => {
+            const ark = arkadasBilgi(a)
+            return ark?.isim?.toLowerCase().includes(arama.toLowerCase())
+          }).map(a => {
             const ark = arkadasBilgi(a)
             return (
-            <div key={a.id} style={{ background: '#fff', borderRadius: 14, padding: '12px 14px', marginBottom: 10, border: '0.5px solid #ebebE8' }}>
-  <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
-    {ark?.avatar_url ? (
-      <img src={ark.avatar_url} style={{ width: 46, height: 46, borderRadius: '50%', objectFit: 'cover' }} alt="avatar" />
-    ) : (
-      <div style={{ width: 46, height: 46, borderRadius: '50%', background: '#e8f7f1', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 600, color: '#0F6E56' }}>
-        {ark?.isim?.slice(0, 2).toUpperCase() || '?'}
-      </div>
-    )}
-    <div style={{ flex: 1 }}>
-      <p style={{ fontSize: 14, fontWeight: 600, color: '#1a1a1a', margin: '0 0 3px' }}>{ark?.isim || 'İsimsiz'}</p>
-      <p style={{ fontSize: 12, color: '#aaa', margin: 0 }}>{ark?.pozisyon || 'Pozisyon belirtilmedi'}</p>
+      <div key={a.id} style={{ background: '#fff', borderRadius: 16, marginBottom: 10, border: '0.5px solid #ebebE8', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
+  <div style={{ height: 4, background: 'linear-gradient(90deg, #1D9E75, #0a7055)' }} />
+  <div style={{ padding: '14px 14px 12px' }}>
+    <div onClick={() => onKullaniciTikla && onKullaniciTikla(ark.id)} style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12, cursor: 'pointer' }}>
+  {ark?.avatar_url ? (
+    <img src={ark.avatar_url} style={{ width: 52, height: 52, borderRadius: '50%', objectFit: 'cover', border: '2px solid #e8f7f1' }} alt="avatar" />
+  ) : (
+    <div style={{ width: 52, height: 52, borderRadius: '50%', background: 'linear-gradient(135deg, #1D9E75, #0a7055)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 700, color: '#fff' }}>
+      {ark?.isim?.slice(0, 1).toUpperCase() || '?'}
+    </div>
+  )}
+  <div style={{ flex: 1 }}>
+    <p style={{ fontSize: 15, fontWeight: 700, color: '#1a1a1a', margin: '0 0 6px', letterSpacing: -0.3 }}>{ark?.isim || 'İsimsiz'}</p>
+    <div style={{ display: 'flex', gap: 6 }}>
+      {ark?.pozisyon && ark.pozisyon !== 'Belirtilmedi' && (
+        <span style={{ fontSize: 11, fontWeight: 500, padding: '2px 8px', borderRadius: 20, background: '#e8f7f1', color: '#0F6E56' }}>{ark.pozisyon}</span>
+      )}
+      {ark?.seviye && (
+        <span style={{ fontSize: 11, fontWeight: 500, padding: '2px 8px', borderRadius: 20, background: '#f5f5f3', color: '#888' }}>{ark.seviye}</span>
+      )}
     </div>
   </div>
-  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-    <button onClick={() => onKullaniciTikla && onKullaniciTikla(ark.id)} style={{ padding: '8px', borderRadius: 10, border: 'none', background: '#f5f5f3', color: '#1a1a1a', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>
-      👤 Profil
-    </button>
-    <button onClick={() => setSeciliArk(ark)} style={{ padding: '8px', borderRadius: 10, border: 'none', background: '#e8f7f1', color: '#0F6E56', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>
-      💬 Mesaj
-    </button>
+  <button onClick={e => { e.stopPropagation(); setSeciliArk(ark) }} style={{ width: 36, height: 36, borderRadius: '50%', border: 'none', background: '#e8f7f1', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+    <svg width="16" height="16" viewBox="0 0 22 22" fill="none">
+      <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" stroke="#1D9E75" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  </button>
+</div>
   </div>
 </div>
             )
@@ -2922,7 +2993,7 @@ function ArkadaslarSayfa({ kullanici, geriDon, onKullaniciTikla }) {
             const ark = i.gonderen
             return (
               <div key={i.id} style={{ background: '#fff', borderRadius: 14, padding: '12px 14px', marginBottom: 10, border: '0.5px solid #ebebE8' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+                <div onClick={() => onKullaniciTikla && onKullaniciTikla(ark.id)} style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12, cursor: 'pointer' }}>
                   {ark?.avatar_url ? (
                     <img src={ark.avatar_url} style={{ width: 46, height: 46, borderRadius: '50%', objectFit: 'cover' }} alt="avatar" />
                   ) : (
