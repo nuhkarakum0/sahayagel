@@ -27,6 +27,7 @@ const sahaIkonu = new L.Icon({
 
 export default function App() {
   const [kullanici, setKullanici] = useState(null)
+  const [isAdmin, setIsAdmin] = useState(false)
   const [aktifEkran, setAktifEkran] = useState('anasayfa')
   const [seciliMac, setSeciliMac] = useState(null)
   const [yukleniyor, setYukleniyor] = useState(true)
@@ -64,6 +65,16 @@ export default function App() {
   }
 
   bildirimleriGetir()
+
+const adminKontrol = async () => {
+  const { data: profilData } = await supabase
+    .from('kullanicilar')
+    .select('rol')
+    .eq('id', kullanici.id)
+    .single()
+  setIsAdmin(profilData?.rol === 'admin')
+}
+adminKontrol()
 
   const kanal = supabase
     .channel(`bildirimler-${kullanici.id}`)
@@ -109,6 +120,9 @@ macaGit={(mac) => {
   onMaclarYuklendi={(data) => setMaclar(data)}
   setAktifEkran={setAktifEkran}
 />
+)}
+{aktifEkran === 'admin' && isAdmin && (
+  <AdminSayfa kullanici={kullanici} />
 )}
             {aktifEkran === 'detay' && seciliMac && (
               <DetaySayfa
@@ -201,7 +215,7 @@ macaGit={(mac) => {
               </div>
             )}
 
-<AltNav aktifEkran={aktifEkran} setAktifEkran={setAktifEkran} okunmamisSayisi={okunmamisSayisi} kullanici={kullanici} />
+<AltNav aktifEkran={aktifEkran} setAktifEkran={setAktifEkran} okunmamisSayisi={okunmamisSayisi} kullanici={kullanici} isAdmin={isAdmin} />
           </>
         )}
       </div>
@@ -2930,14 +2944,285 @@ const gonder = async () => {
   )
 }
 
-function AltNav({ aktifEkran, setAktifEkran, okunmamisSayisi, kullanici }) {
+function AdminSayfa({ kullanici }) {
+  const [aktifTab, setAktifTab] = useState('kullanicilar')
+  const [kullanicilar, setKullanicilar] = useState([])
+  const [ilanlar, setIlanlar] = useState([])
+  const [istatistikler, setIstatistikler] = useState({})
+  const [yukleniyor, setYukleniyor] = useState(true)
+  const [arama, setArama] = useState('')
+  const [sikayetler, setSikayetler] = useState([])
+  const [seciliKullanici, setSeciliKullanici] = useState(null)
+
+  useEffect(() => {
+    const getir = async () => {
+      setYukleniyor(true)
+
+      const { data: sikayetData } = await supabase
+        .from('sikayetler')
+        .select('*, sikayet_eden:sikayet_eden_id(isim, avatar_url), sikayet_edilen:sikayet_edilen_id(isim, avatar_url)')
+        .order('olusturuldu', { ascending: false })
+      setSikayetler(sikayetData || [])
+
+      const { data: kullaniciData } = await supabase
+        .from('kullanicilar')
+        .select('*')
+        .order('olusturuldu', { ascending: false })
+      setKullanicilar(kullaniciData || [])
+
+      const { data: ilanData } = await supabase
+        .from('maclar')
+        .select('*, kullanicilar!maclar_organizator_id_fkey(isim)')
+        .order('olusturuldu', { ascending: false })
+        .limit(20)
+      setIlanlar(ilanData || [])
+
+      const { count: kullaniciSayisi } = await supabase
+        .from('kullanicilar')
+        .select('*', { count: 'exact', head: true })
+
+      const { count: macSayisi } = await supabase
+        .from('maclar')
+        .select('*', { count: 'exact', head: true })
+
+      const { count: katilimSayisi } = await supabase
+        .from('katilimlar')
+        .select('*', { count: 'exact', head: true })
+        .eq('durum', 'onaylandi')
+
+      setIstatistikler({ kullaniciSayisi, macSayisi, katilimSayisi })
+      setYukleniyor(false)
+    }
+    getir()
+  }, [])
+
+  const rozetVer = async (kullaniciId, rozet) => {
+    await supabase.from('kullanicilar').update({ rozet }).eq('id', kullaniciId)
+    setKullanicilar(prev => prev.map(k => k.id === kullaniciId ? { ...k, rozet } : k))
+  }
+
+  const ilanSil = async (ilanId) => {
+    if (!window.confirm('Bu ilanı silmek istediğine emin misin?')) return
+    await supabase.from('maclar').delete().eq('id', ilanId)
+    setIlanlar(prev => prev.filter(i => i.id !== ilanId))
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
+      <div style={{ padding: '14px 22px 12px', borderBottom: '0.5px solid #ebebE8', flexShrink: 0 }}>
+        <h2 style={{ fontSize: 20, fontWeight: 700, margin: 0, letterSpacing: -0.5 }}>Admin Paneli</h2>
+      </div>
+
+      {/* İstatistikler */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, padding: '14px 22px', flexShrink: 0 }}>
+        {[
+          { sayi: istatistikler.kullaniciSayisi, label: 'Kullanıcı', renk: '#1D9E75' },
+          { sayi: istatistikler.macSayisi, label: 'Toplam maç', renk: '#185FA5' },
+          { sayi: istatistikler.katilimSayisi, label: 'Katılım', renk: '#854F0B' },
+        ].map((s, i) => (
+          <div key={i} style={{ background: '#fff', borderRadius: 14, padding: '12px 10px', textAlign: 'center', border: `0.5px solid #ebebE8`, borderTop: `3px solid ${s.renk}` }}>
+            <p style={{ fontSize: 22, fontWeight: 700, color: s.renk, margin: '0 0 4px' }}>{s.sayi}</p>
+            <p style={{ fontSize: 11, color: '#aaa', margin: 0 }}>{s.label}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Tab */}
+      <div style={{ display: 'flex', borderBottom: '0.5px solid #ebebE8', flexShrink: 0, paddingLeft: 22 }}>
+          {[
+            { id: 'kullanicilar', label: 'Kullanıcılar' },
+            { id: 'ilanlar', label: 'İlanlar' },
+            { id: 'sikayetler', label: 'Şikayetler' },
+            { id: 'istatistikler', label: 'İstatistikler' },
+          ].map(tab => (
+          <button key={tab.id} onClick={() => { setAktifTab(tab.id); setArama('') }} style={{
+            padding: '10px 16px', fontSize: 13, fontWeight: aktifTab === tab.id ? 600 : 400, border: 'none', background: 'none', cursor: 'pointer',
+            color: aktifTab === tab.id ? '#1D9E75' : '#aaa',
+            borderBottom: aktifTab === tab.id ? '2px solid #1D9E75' : '2px solid transparent',
+          }}>{tab.label}</button>
+        ))}
+      </div>
+
+      <div style={{ padding: '10px 22px', flexShrink: 0, borderBottom: '0.5px solid #ebebE8' }}>
+  <div style={{ background: '#f5f5f3', borderRadius: 12, padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 8 }}>
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+      <circle cx="7" cy="7" r="5" stroke="#aaa" strokeWidth="1.4" />
+      <path d="M11 11l2.5 2.5" stroke="#aaa" strokeWidth="1.4" strokeLinecap="round" />
+    </svg>
+    <input
+      placeholder={aktifTab === 'kullanicilar' ? 'İsim ara...' : 'Saha adı ara...'}
+      value={arama}
+      onChange={e => setArama(e.target.value)}
+      style={{ border: 'none', outline: 'none', fontSize: 14, color: '#1a1a1a', background: 'none', flex: 1 }}
+    />
+    {arama && <span onClick={() => setArama('')} style={{ fontSize: 18, color: '#bbb', cursor: 'pointer' }}>×</span>}
+  </div>
+</div>
+
+      <div style={{ flex: 1, overflowY: 'auto', padding: '16px 22px' }}>
+        {yukleniyor ? (
+          <p style={{ color: '#aaa', textAlign: 'center', padding: '40px 0' }}>Yükleniyor...</p>
+        ) : seciliKullanici ? (
+          <div style={{ background: '#fff', borderRadius: 16, padding: '16px', border: '0.5px solid #ebebE8' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+              <span onClick={() => setSeciliKullanici(null)} style={{ fontSize: 24, color: '#1D9E75', cursor: 'pointer' }}>‹</span>
+              <p style={{ fontSize: 16, fontWeight: 700, margin: 0 }}>Kullanıcı Detayı</p>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+              {seciliKullanici.avatar_url ? (
+                <img src={seciliKullanici.avatar_url} style={{ width: 60, height: 60, borderRadius: '50%', objectFit: 'cover' }} alt="avatar" />
+              ) : (
+                <div style={{ width: 60, height: 60, borderRadius: '50%', background: '#e8f7f1', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, fontWeight: 600, color: '#0F6E56' }}>
+                  {seciliKullanici.isim?.slice(0, 2).toUpperCase() || '?'}
+                </div>
+              )}
+              <div>
+                <p style={{ fontSize: 16, fontWeight: 700, margin: '0 0 4px' }}>{seciliKullanici.isim || 'İsimsiz'}</p>
+                <p style={{ fontSize: 12, color: '#aaa', margin: 0 }}>{seciliKullanici.email}</p>
+              </div>
+            </div>
+            {[
+              ['Rol', seciliKullanici.rol || 'kullanici'],
+              ['Pozisyon', seciliKullanici.pozisyon || '—'],
+              ['Seviye', seciliKullanici.seviye || '—'],
+              ['Ortalama Puan', seciliKullanici.ortalama_puan || '—'],
+              ['Değerlendirme', seciliKullanici.degerlendirme_sayisi || 0],
+              ['Rozet', seciliKullanici.rozet || 'Yok'],
+              ['Kayıt Tarihi', new Date(seciliKullanici.olusturuldu).toLocaleDateString('tr-TR')],
+            ].map(([k, v], i) => (
+              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '0.5px solid #f0f0ee' }}>
+                <span style={{ fontSize: 13, color: '#aaa' }}>{k}</span>
+                <span style={{ fontSize: 13, color: '#1a1a1a', fontWeight: 500 }}>{v}</span>
+              </div>
+            ))}
+            <div style={{ display: 'flex', gap: 8, marginTop: 14, flexWrap: 'wrap' }}>
+              <button onClick={() => rozetVer(seciliKullanici.id, seciliKullanici.rozet === 'guvenilir_organizator' ? null : 'guvenilir_organizator')} style={{ padding: '8px 14px', borderRadius: 10, fontSize: 12, fontWeight: 500, cursor: 'pointer', border: 'none', background: '#fdf3e8', color: '#854F0B' }}>
+                {seciliKullanici.rozet === 'guvenilir_organizator' ? '🏅 Rozeti kaldır' : '🏅 Rozet ver'}
+              </button>
+              <button onClick={async () => {
+                const yeniRol = seciliKullanici.rol === 'admin' ? 'kullanici' : 'admin'
+                await supabase.from('kullanicilar').update({ rol: yeniRol }).eq('id', seciliKullanici.id)
+                setKullanicilar(prev => prev.map(k => k.id === seciliKullanici.id ? { ...k, rol: yeniRol } : k))
+                setSeciliKullanici(prev => ({ ...prev, rol: yeniRol }))
+              }} style={{ padding: '8px 14px', borderRadius: 10, fontSize: 12, fontWeight: 500, cursor: 'pointer', border: 'none', background: '#e8eef7', color: '#185FA5' }}>
+                {seciliKullanici.rol === 'admin' ? '👤 Admin kaldır' : '👤 Admin yap'}
+              </button>
+            </div>
+          </div>
+        ) : aktifTab === 'kullanicilar' ? (
+         kullanicilar
+          .filter(k => k.isim?.toLowerCase().includes(arama.toLowerCase()) || k.email?.toLowerCase().includes(arama.toLowerCase()))
+          .map((k, i) => (
+                  <div key={i} onClick={() => setSeciliKullanici(k)} style={{ background: '#fff', borderRadius: 14, padding: '12px 14px', marginBottom: 10, border: '0.5px solid #ebebE8', cursor: 'pointer' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
+                {k.avatar_url ? (
+                  <img src={k.avatar_url} style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover' }} alt="avatar" />
+                ) : (
+                  <div style={{ width: 40, height: 40, borderRadius: '50%', background: '#e8f7f1', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 600, color: '#0F6E56' }}>
+                    {k.isim?.slice(0, 2).toUpperCase() || '?'}
+                  </div>
+                )}
+                <div style={{ flex: 1 }}>
+                  <p style={{ fontSize: 14, fontWeight: 600, margin: '0 0 2px' }}>{k.isim || 'İsimsiz'}</p>
+                  <p style={{ fontSize: 11, color: '#aaa', margin: 0 }}>{k.email || ''} · {k.rol || 'kullanici'}</p>
+                </div>
+                {k.ortalama_puan > 0 && (
+                  <span style={{ fontSize: 12, color: '#1D9E75', fontWeight: 600 }}>⭐ {k.ortalama_puan}</span>
+                )}
+              </div>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                <button onClick={() => rozetVer(k.id, k.rozet === 'guvenilir_organizator' ? null : 'guvenilir_organizator')} style={{
+                  padding: '5px 12px', borderRadius: 20, fontSize: 11, fontWeight: 500, cursor: 'pointer', border: 'none',
+                  background: k.rozet === 'guvenilir_organizator' ? '#fdf3e8' : '#f5f5f3',
+                  color: k.rozet === 'guvenilir_organizator' ? '#854F0B' : '#666',
+                }}>
+                  {k.rozet === 'guvenilir_organizator' ? '🏅 Rozeti kaldır' : '🏅 Rozet ver'}
+                </button>
+              </div>
+            </div>
+          ))
+        ) : aktifTab === 'ilanlar' ? (
+          ilanlar
+  .filter(ilan => ilan.saha_adi?.toLowerCase().includes(arama.toLowerCase()) || ilan.ilce?.toLowerCase().includes(arama.toLowerCase()))
+  .map((ilan, i) => {
+            const tarih = new Date(ilan.saat).toLocaleString('tr-TR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
+            const gecti = new Date(ilan.saat) < new Date()
+            return (
+              <div key={i} style={{ background: '#fff', borderRadius: 14, padding: '12px 14px', marginBottom: 10, border: '0.5px solid #ebebE8' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+                  <div>
+                    <p style={{ fontSize: 13, fontWeight: 600, margin: '0 0 3px', textTransform: 'capitalize' }}>{ilan.saha_adi}</p>
+                    <p style={{ fontSize: 11, color: '#aaa', margin: 0 }}>{ilan.ilce} · {tarih} · {ilan.kullanicilar?.isim}</p>
+                  </div>
+                  <span style={{ fontSize: 11, fontWeight: 500, padding: '4px 10px', borderRadius: 20, background: gecti ? '#f5f5f3' : '#e8f7f1', color: gecti ? '#aaa' : '#0F6E56' }}>
+                    {gecti ? 'Geçti' : 'Aktif'}
+                  </span>
+                </div>
+                <button onClick={() => ilanSil(ilan.id)} style={{ padding: '6px 14px', borderRadius: 10, fontSize: 12, fontWeight: 500, cursor: 'pointer', border: 'none', background: '#fdecea', color: '#c0392b' }}>
+                  Sil
+                </button>
+              </div>
+            )
+          })
+        ) : aktifTab === 'sikayetler' ? (
+          sikayetler.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '40px 0' }}>
+              <p style={{ fontSize: 40, margin: '0 0 12px' }}>✅</p>
+              <p style={{ fontSize: 14, color: '#aaa' }}>Şikayet yok</p>
+            </div>
+          ) : sikayetler.filter(s => s.sikayet_edilen?.isim?.toLowerCase().includes(arama.toLowerCase())).map((s, i) => (
+            <div key={i} style={{ background: '#fff', borderRadius: 14, padding: '12px 14px', marginBottom: 10, border: '0.5px solid #ebebE8' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                <div>
+                  <p style={{ fontSize: 13, fontWeight: 600, margin: '0 0 3px' }}>Şikayet edilen: {s.sikayet_edilen?.isim || '?'}</p>
+                  <p style={{ fontSize: 11, color: '#aaa', margin: 0 }}>Şikayet eden: {s.sikayet_eden?.isim || '?'}</p>
+                </div>
+                <span style={{ fontSize: 11, fontWeight: 500, padding: '4px 10px', borderRadius: 20, background: s.durum === 'cozuldu' ? '#e8f7f1' : '#fdecea', color: s.durum === 'cozuldu' ? '#0F6E56' : '#c0392b' }}>
+                  {s.durum === 'cozuldu' ? 'Çözüldü' : 'Bekliyor'}
+                </span>
+              </div>
+              <p style={{ fontSize: 12, color: '#555', margin: '0 0 10px' }}>{s.sebep}</p>
+              {s.durum !== 'cozuldu' && (
+                <button onClick={async () => {
+                  await supabase.from('sikayetler').update({ durum: 'cozuldu' }).eq('id', s.id)
+                  setSikayetler(prev => prev.map(x => x.id === s.id ? { ...x, durum: 'cozuldu' } : x))
+                }} style={{ padding: '6px 14px', borderRadius: 10, fontSize: 12, fontWeight: 500, cursor: 'pointer', border: 'none', background: '#e8f7f1', color: '#0F6E56' }}>
+                  ✓ Çözüldü olarak işaretle
+                </button>
+              )}
+            </div>
+          ))
+        ) : aktifTab === 'istatistikler' ? (
+          <div>
+            {[
+              { label: 'Toplam kullanıcı', sayi: istatistikler.kullaniciSayisi, renk: '#1D9E75' },
+              { label: 'Toplam maç', sayi: istatistikler.macSayisi, renk: '#185FA5' },
+              { label: 'Toplam katılım', sayi: istatistikler.katilimSayisi, renk: '#854F0B' },
+              { label: 'Toplam şikayet', sayi: sikayetler.length, renk: '#e74c3c' },
+              { label: 'Bekleyen şikayet', sayi: sikayetler.filter(s => s.durum === 'bekliyor').length, renk: '#e67e22' },
+            ].map((s, i) => (
+              <div key={i} style={{ background: '#fff', borderRadius: 14, padding: '14px 16px', marginBottom: 10, border: '0.5px solid #ebebE8', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: 14, color: '#555' }}>{s.label}</span>
+                <span style={{ fontSize: 20, fontWeight: 700, color: s.renk }}>{s.sayi}</span>
+              </div>
+            ))}
+          </div>
+       ) : null}
+      </div>
+    </div>
+  )
+}
+
+function AltNav({ aktifEkran, setAktifEkran, okunmamisSayisi, kullanici, isAdmin }) {
   const items = [
     { id: 'anasayfa', label: 'Keşfet', path: <path d="M3 10L11 3l8 7v9a1 1 0 01-1 1H5a1 1 0 01-1-1v-9z" stroke="currentColor" strokeWidth="1.5" /> },
     { id: 'ilan', label: 'İlan aç', path: <><circle cx="11" cy="11" r="8" stroke="currentColor" strokeWidth="1.5" /><path d="M11 8v6M8 11h6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></> },
     { id: 'bildirim', label: 'Bildirim', badge: okunmamisSayisi, path: <><path d="M11 2a7 7 0 017 7v3l1.5 3H2.5L4 12V9a7 7 0 017-7z" stroke="currentColor" strokeWidth="1.5" /><path d="M9 18a2 2 0 004 0" stroke="currentColor" strokeWidth="1.5" /></> },
     { id: 'arkadaslar', label: 'Arkadaşlar', badge: 0, path: <><circle cx="8" cy="7" r="3" stroke="currentColor" strokeWidth="1.5"/><circle cx="16" cy="7" r="3" stroke="currentColor" strokeWidth="1.5"/><path d="M2 19c0-3 2.5-5 6-5M12 19c0-3 2.5-5 6-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></> },
     { id: 'profil', label: 'Profil', path: <><circle cx="11" cy="8" r="3.5" stroke="currentColor" strokeWidth="1.5" /><path d="M4 19c0-3.866 3.134-6 7-6s7 2.134 7 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></> },
+...(isAdmin ? [{ id: 'admin', label: 'Admin', badge: 0, path: <><path d="M3 3h18v18H3z" stroke="currentColor" strokeWidth="1.5"/><path d="M3 9h18M9 21V9" stroke="currentColor" strokeWidth="1.5"/></> }] : []),
   ]
+  
   return (
     <div style={{ background: '#fff', borderTop: '0.5px solid #ebebE8', display: 'flex', flexShrink: 0, paddingBottom: 4 }}>
       {items.map(item => {
