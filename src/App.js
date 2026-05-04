@@ -35,6 +35,8 @@ export default function App() {
   const [okunmamisSayisi, setOkunmamisSayisi] = useState(0)
   const [hedefKullanici, setHedefKullanici] = useState(null)
   const [seciliOzelMesaj, setSeciliOzelMesaj] = useState(null)
+  const [degerlendirmeMac, setDegerlendirmeMac] = useState(null)
+  const [degerlendirmeKatilimcilar, setDegerlendirmeKatilimcilar] = useState([])
   
 
   useEffect(() => {
@@ -144,8 +146,14 @@ macaGit={(mac) => {
               />
             )}
             {aktifEkran === 'profil' && kullanici && (
-  <ProfilSayfa kullanici={kullanici} setKullanici={setKullanici} geriDon={() => setAktifEkran('anasayfa')} />
-)}
+          <ProfilSayfa 
+            kullanici={kullanici} 
+            setKullanici={setKullanici} 
+            onDegerlendirmeAc={(mac, katilimcilar) => {
+              setDegerlendirmeMac(mac)
+              setDegerlendirmeKatilimcilar(katilimcilar)
+            }}
+          />)}
            {aktifEkran === 'arkadaslar' && kullanici && (
               <ArkadaslarSayfa
                 kullanici={kullanici}
@@ -164,6 +172,17 @@ macaGit={(mac) => {
                 />
               </div>
             )}
+
+            {degerlendirmeMac && (
+                <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: '#f8f8f6', zIndex: 250, display: 'flex', flexDirection: 'column' }}>
+                  <DegerlendirmeSayfa
+                    kullanici={kullanici}
+                    mac={degerlendirmeMac}
+                    katilimcilar={degerlendirmeKatilimcilar}
+                    geriDon={() => setDegerlendirmeMac(null)}
+                  />
+                </div>
+              )}
 
            {hedefKullanici && (
                 <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: '#f8f8f6', zIndex: 300, display: 'flex', flexDirection: 'column' }}>
@@ -1622,7 +1641,8 @@ function BildirimSayfa({ kullanici, bildirimler, setBildirimler, setOkunmamisSay
 )
 }
 
-function ProfilSayfa({ kullanici, setKullanici }) {
+function ProfilSayfa({ kullanici, setKullanici, onDegerlendirmeAc }) {
+
   const [profil, setProfil] = useState(null)
   const [duzenle, setDuzenle] = useState(false)
   const [isim, setIsim] = useState('')
@@ -1636,6 +1656,7 @@ function ProfilSayfa({ kullanici, setKullanici }) {
   const [maclarim, setMaclarim] = useState([])
   const [ilanlarim, setIlanlarim] = useState([])
   const [seciliMac, setSeciliMac] = useState(null)
+  const [degerlendirilenMaclar, setDegerlendirilenMaclar] = useState([])
 
   const pozisyonlar = ['Kaleci', 'Defans', 'Orta saha', 'Forvet', 'Belirtilmedi']
   const seviyeler = ['Amatör', 'Orta', 'İyi', 'Profesyonel']
@@ -1654,6 +1675,7 @@ function ProfilSayfa({ kullanici, setKullanici }) {
     'İyi': { bg: '#e8eef7', text: '#185FA5' },
     'Profesyonel': { bg: '#fdf3e8', text: '#854F0B' },
   }
+  
 
   useEffect(() => {
     const profilGetir = async () => {
@@ -1689,6 +1711,11 @@ function ProfilSayfa({ kullanici, setKullanici }) {
        .order('saat', { ascending: false })
 
 setIlanlarim(ilanlarimData || [])
+const { data: degerData } = await supabase
+  .from('degerlendirmeler')
+  .select('mac_id')
+  .eq('degerlendiren_id', kullanici.id)
+setDegerlendirilenMaclar((degerData || []).map(d => d.mac_id))
       
     }
     profilGetir()
@@ -1803,6 +1830,7 @@ if (seciliMac) return (
           {/* İstatistikler */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 20 }}>
             {[
+              { sayi: profil?.ortalama_puan ? `${profil.ortalama_puan}⭐` : '—', label: 'Puan', kucuk: true },
               { sayi: maclarim.length, label: 'Toplam maç' },
               { sayi: maclarim.filter(m => new Date(m.maclar?.saat) > new Date()).length, label: 'Yaklaşan' },
               { sayi: maclarim.filter(m => new Date(m.maclar?.saat) < new Date()).length, label: 'Oynandı' },
@@ -1924,7 +1952,24 @@ if (seciliMac) return (
                 const gecti = new Date(k.maclar?.saat) < new Date()
                 const tarih = new Date(k.maclar?.saat).toLocaleString('tr-TR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
                 return (
-                  <div key={i} style={{ background: '#fff', borderRadius: 14, padding: '12px 14px', marginBottom: 10, border: '0.5px solid #ebebE8', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div key={i} style={{ background: '#fff', borderRadius: 14, padding: '12px 14px', marginBottom: 10, border: '0.5px solid #ebebE8' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: gecti ? 10 : 0 }}>
+                        </div>
+{gecti && !degerlendirilenMaclar.includes(k.mac_id) && (
+
+    <button onClick={async () => {
+      const macId = k.mac_id
+      const { data } = await supabase
+        .from('katilimlar')
+        .select('*, kullanicilar(isim, avatar_url)')
+        .eq('mac_id', macId)
+        .eq('durum', 'onaylandi')
+      const macBilgi = { ...k.maclar, id: macId }
+      onDegerlendirmeAc(macBilgi, data || [])
+    }} style={{ width: '100%', padding: '8px', background: '#e8f7f1', color: '#0F6E56', border: 'none', borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+      ⭐ Oyuncuları değerlendir
+    </button>
+  )}
                     <div>
                       <p style={{ fontSize: 13, fontWeight: 600, color: '#1a1a1a', margin: '0 0 3px', textTransform: 'capitalize' }}>{k.maclar?.saha_adi}</p>
                       <p style={{ fontSize: 11, color: '#aaa', margin: 0 }}>{k.maclar?.ilce} · {tarih}</p>
@@ -2099,6 +2144,146 @@ useEffect(() => {
     </div>
   </div>
 )
+}
+
+function DegerlendirmeSayfa({ kullanici, mac, katilimcilar, geriDon }) {
+  const [degerlendirmeler, setDegerlendirmeler] = useState({})
+  const [yorumlar, setYorumlar] = useState({})
+  const [gonderiyor, setGonderiyor] = useState(false)
+  const [tamamlandi, setTamamlandi] = useState(false)
+
+  const degerlendirilecekler = katilimcilar.filter(k => 
+    k.kullanici_id !== kullanici.id && k.durum === 'onaylandi'
+  )
+
+  const puanSec = (kullaniciId, kriter, puan) => {
+    setDegerlendirmeler(prev => ({
+      ...prev,
+      [kullaniciId]: { ...prev[kullaniciId], [kriter]: puan }
+    }))
+  }
+
+  const gonder = async () => {
+    setGonderiyor(true)
+    for (const k of degerlendirilecekler) {
+      const d = degerlendirmeler[k.kullanici_id]
+      if (!d || !d.guvenilirlik) continue
+      
+      await supabase.from('degerlendirmeler').upsert({
+        mac_id: mac.id,
+        degerlendiren_id: kullanici.id,
+        degerlendirilen_id: k.kullanici_id,
+        guvenilirlik: d.guvenilirlik || 0,
+        beceri: d.beceri || 0,
+        takim_ruhu: d.takim_ruhu || 0,
+        yorum: yorumlar[k.kullanici_id] || null,
+      })
+
+      // Ortalama güncelle
+      const { data: tumDeger } = await supabase
+        .from('degerlendirmeler')
+        .select('guvenilirlik, beceri, takim_ruhu')
+        .eq('degerlendirilen_id', k.kullanici_id)
+
+      if (tumDeger && tumDeger.length > 0) {
+        const ort = tumDeger.reduce((acc, d) => 
+          acc + (d.guvenilirlik + d.beceri + d.takim_ruhu) / 3, 0) / tumDeger.length
+        await supabase.from('kullanicilar')
+          .update({ 
+            ortalama_puan: Math.round(ort * 10) / 10,
+            degerlendirme_sayisi: tumDeger.length 
+          })
+          .eq('id', k.kullanici_id)
+      }
+    }
+    setGonderiyor(false)
+    setTamamlandi(true)
+  }
+
+const YildizPuan = ({ kullaniciId, kriter, label }) => {
+  const puan = degerlendirmeler[kullaniciId]?.[kriter] || 0
+  return (
+    <div style={{ marginBottom: 12 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+        <p style={{ fontSize: 12, color: '#aaa', margin: 0, fontWeight: 500 }}>{label}</p>
+        <p style={{ fontSize: 12, color: '#1D9E75', margin: 0, fontWeight: 700 }}>{puan > 0 ? puan + '/5' : '—'}</p>
+      </div>
+      <div style={{ display: 'flex', gap: 8 }}>
+        {[1, 2, 3, 4, 5].map(y => (
+          <div key={y} onClick={() => puanSec(kullaniciId, kriter, y)} style={{
+            flex: 1, height: 8, borderRadius: 4, cursor: 'pointer',
+            background: puan >= y ? '#1D9E75' : '#f0f0ee',
+            transition: 'background 0.2s',
+          }} />
+        ))}
+      </div>
+    </div>
+  )
+}
+
+  if (tamamlandi) return (
+    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 }}>
+      <p style={{ fontSize: 48, margin: '0 0 16px' }}>🎉</p>
+      <p style={{ fontSize: 20, fontWeight: 700, color: '#1a1a1a', margin: '0 0 8px' }}>Teşekkürler!</p>
+      <p style={{ fontSize: 14, color: '#aaa', textAlign: 'center', margin: '0 0 24px' }}>Değerlendirmelerin kaydedildi.</p>
+      <button onClick={geriDon} style={{ padding: '12px 32px', background: '#1D9E75', color: '#fff', border: 'none', borderRadius: 14, fontSize: 15, fontWeight: 600, cursor: 'pointer' }}>
+        Tamam
+      </button>
+    </div>
+  )
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
+      <div style={{ padding: '14px 22px 12px', borderBottom: '0.5px solid #ebebE8', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 10 }}>
+        <span onClick={geriDon} style={{ fontSize: 28, color: '#1D9E75', cursor: 'pointer', fontWeight: 600 }}>‹</span>
+        <div>
+          <p style={{ fontSize: 16, fontWeight: 700, margin: 0 }}>Oyuncuları değerlendir</p>
+          <p style={{ fontSize: 12, color: '#aaa', margin: 0 }}>{mac.saha_adi}</p>
+        </div>
+      </div>
+
+      <div style={{ flex: 1, overflowY: 'auto', padding: '16px 22px' }}>
+        {degerlendirilecekler.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '40px 0' }}>
+            <p style={{ fontSize: 14, color: '#aaa' }}>Değerlendirilecek oyuncu yok</p>
+          </div>
+        ) : degerlendirilecekler.map(k => (
+          <div key={k.kullanici_id} style={{ background: '#fff', borderRadius: 16, padding: '16px', marginBottom: 14, border: '0.5px solid #ebebE8' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
+              {k.kullanicilar?.avatar_url ? (
+                <img src={k.kullanicilar.avatar_url} style={{ width: 44, height: 44, borderRadius: '50%', objectFit: 'cover' }} alt="avatar" />
+              ) : (
+                <div style={{ width: 44, height: 44, borderRadius: '50%', background: '#e8f7f1', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, fontWeight: 600, color: '#0F6E56' }}>
+                  {k.kullanicilar?.isim?.slice(0, 2).toUpperCase() || '?'}
+                </div>
+              )}
+              <p style={{ fontSize: 15, fontWeight: 600, margin: 0 }}>{k.kullanicilar?.isim || 'İsimsiz'}</p>
+            </div>
+
+            <YildizPuan kullaniciId={k.kullanici_id} kriter="guvenilirlik" label="Güvenilirlik (geldi mi?)" />
+            <YildizPuan kullaniciId={k.kullanici_id} kriter="beceri" label="Beceri" />
+            <YildizPuan kullaniciId={k.kullanici_id} kriter="takim_ruhu" label="Takım ruhu" />
+
+            <div style={{ marginTop: 10 }}>
+              <p style={{ fontSize: 11, color: '#aaa', margin: '0 0 4px', fontWeight: 500 }}>Yorum (isteğe bağlı)</p>
+              <input
+                placeholder="Bu oyuncu hakkında ne düşünüyorsun?"
+                value={yorumlar[k.kullanici_id] || ''}
+                onChange={e => setYorumlar(prev => ({ ...prev, [k.kullanici_id]: e.target.value }))}
+                style={{ width: '100%', border: 'none', outline: 'none', fontSize: 13, color: '#1a1a1a', background: '#f5f5f3', borderRadius: 10, padding: '10px 12px' }}
+              />
+            </div>
+          </div>
+        ))}
+
+        <button onClick={gonder} disabled={gonderiyor} style={{
+          width: '100%', padding: 16, background: 'linear-gradient(135deg, #1D9E75, #0a7055)', color: '#fff', border: 'none', borderRadius: 16, fontSize: 15, fontWeight: 600, cursor: 'pointer', marginBottom: 16, opacity: gonderiyor ? 0.6 : 1
+        }}>
+          {gonderiyor ? 'Gönderiliyor...' : 'Değerlendirmeleri gönder'}
+        </button>
+      </div>
+    </div>
+  )
 }
 
 function KullaniciProfil({ kullanici, hedefId, geriDon, onMesajAc, onKullaniciTikla }) {
