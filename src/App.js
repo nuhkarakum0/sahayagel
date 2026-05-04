@@ -85,6 +85,12 @@ adminKontrol()
       filter: `kullanici_id=eq.${kullanici.id}`
     }, (payload) => {
       setBildirimler(prev => [payload.new, ...prev])
+      if (navigator.vibrate) navigator.vibrate(200)
+      try {
+        const ses = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3')
+        ses.volume = 0.3
+        ses.play()
+      } catch(e) {}
       setOkunmamisSayisi(prev => prev + 1)
     })
     .subscribe()
@@ -965,10 +971,6 @@ useEffect(() => {
   await supabase.from('katilimlar').update({ durum: yeniDurum }).eq('id', katilimId)
 
   const katilim = katilimlar.find(k => k.id === katilimId)
-  
-  console.log('katilim:', katilim)
-  console.log('yeniDurum:', yeniDurum)
-
   if (katilim && katilim.kullanici_id) {
     if (yeniDurum === 'onaylandi') {
     await bildirimGonder(
@@ -989,6 +991,16 @@ useEffect(() => {
       )
     }
   }
+  const yeniOnaylananSayisi = katilimlar.filter(k => k.durum === 'onaylandi').length + (yeniDurum === 'onaylandi' ? 1 : -1)
+if (yeniDurum === 'onaylandi' && yeniOnaylananSayisi >= mac.toplam_kisi) {
+  await bildirimGonder(
+    mac.organizator_id,
+    '🎉 Maç doldu!',
+    `"${mac.saha_adi}" maçın tamamlandı, tüm yerler doldu!`,
+    'onay',
+    mac.id
+  )
+}
   katilimlariGetir()
 }
 
@@ -1065,6 +1077,15 @@ const mesajGonder = async () => {
       {/* Yeşil header */}
       <div style={{ background: '#1D9E75', padding: '16px 22px 20px', flexShrink: 0 }}>
         <span onClick={geriDon} style={{ color: '#fff', fontSize: 26, cursor: 'pointer', opacity: 0.8, display: 'inline-block', marginBottom: 8 }}>‹</span>
+        {benOrganizatorum && (
+  <button onClick={async () => {
+    if (!window.confirm('İlanı silmek istediğine emin misin?')) return
+    await supabase.from('maclar').delete().eq('id', mac.id)
+    geriDon()
+  }} style={{ float: 'right', background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: 10, padding: '6px 14px', color: '#fff', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>
+    Sil
+  </button>
+)}
         <p style={{ fontSize: 20, fontWeight: 500, color: '#fff', margin: '0 0 4px', letterSpacing: -0.3 }}>{mac.saha_adi}</p>
         <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.7)', margin: '0 0 14px' }}>
           {benOrganizatorum ? '👑 Senin ilanın' : `Organizatör: ${mac.kullanicilar?.isim || 'Bilinmiyor'}`} · {mac.format}
@@ -1492,17 +1513,21 @@ if (!sahaAdi || !il || !ilce || !saat) { setHata('Lütfen tüm zorunlu alanları
       </div>
 
       {/* Tarih ve saat */}
-      <div style={{ background: '#fff', borderRadius: 16, padding: '14px 16px', marginBottom: 12, border: '0.5px solid #ebebE8', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
-        <p style={{ fontSize: 11, color: '#aaa', margin: '0 0 6px', fontWeight: 500, textTransform: 'uppercase', letterSpacing: 0.5 }}>Tarih ve saat *</p>
-            <div style={{ display: 'flex', gap: 10 }}>
-  <input type="date" style={{ flex: 1, border: 'none', outline: 'none', fontSize: 15, color: '#1a1a1a', background: 'none', fontWeight: 500, cursor: 'pointer' }}
-    value={saat ? saat.split('T')[0] : ''}
-    onChange={e => setSaat(prev => e.target.value + 'T' + (prev?.split('T')[1] || '00:00'))} />
-  <input type="time" style={{ flex: 1, border: 'none', outline: 'none', fontSize: 15, color: '#1a1a1a', background: 'none', fontWeight: 500, cursor: 'pointer' }}
-    value={saat ? saat.split('T')[1] : ''}
-    onChange={e => setSaat(prev => (prev?.split('T')[0] || '') + 'T' + e.target.value)} />
+<div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 12 }}>
+  <div style={{ background: '#fff', borderRadius: 16, padding: '14px 16px', border: '0.5px solid #ebebE8', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
+    <p style={{ fontSize: 11, color: '#aaa', margin: '0 0 6px', fontWeight: 500, textTransform: 'uppercase', letterSpacing: 0.5 }}>Tarih *</p>
+    <input type="date" style={{ width: '100%', border: 'none', outline: 'none', fontSize: 14, color: saat ? '#1a1a1a' : '#bbb', background: 'none', fontWeight: 500, cursor: 'pointer' }}
+      value={saat ? saat.split('T')[0] : ''}
+      min={new Date().toISOString().split('T')[0]}
+      onChange={e => setSaat(prev => e.target.value + 'T' + (prev?.split('T')[1] || '00:00'))} />
+  </div>
+  <div style={{ background: '#fff', borderRadius: 16, padding: '14px 16px', border: '0.5px solid #ebebE8', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
+    <p style={{ fontSize: 11, color: '#aaa', margin: '0 0 6px', fontWeight: 500, textTransform: 'uppercase', letterSpacing: 0.5 }}>Saat *</p>
+    <input type="time" style={{ width: '100%', border: 'none', outline: 'none', fontSize: 14, color: saat ? '#1a1a1a' : '#bbb', background: 'none', fontWeight: 500, cursor: 'pointer' }}
+      value={saat ? saat.split('T')[1] : ''}
+      onChange={e => setSaat(prev => (prev?.split('T')[0] || '') + 'T' + e.target.value)} />
+  </div>
 </div>
-      </div>
 
       {/* Kaça Kaç */}
       <div style={{ background: '#fff', borderRadius: 16, padding: '16px 16px 14px', marginBottom: 12, border: '0.5px solid #ebebE8', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
@@ -2560,6 +2585,8 @@ function KullaniciProfil({ kullanici, hedefId, geriDon, onMesajAc, onKullaniciTi
   const [arkadasDurum, setArkadasDurum] = useState(null)
   const [yukleniyor, setYukleniyor] = useState(true)
   const [maclar, setMaclar] = useState([])
+  const [yorumlar, setYorumlar] = useState([])
+
 
   useEffect(() => {
     const getir = async () => {
@@ -2587,6 +2614,15 @@ function KullaniciProfil({ kullanici, hedefId, geriDon, onMesajAc, onKullaniciTi
         .order('olusturuldu', { ascending: false })
         .limit(5)
       setMaclar(katilimData || [])
+      const { data: yorumData } = await supabase
+        .from('degerlendirmeler')
+        .select('yorum, degerlendiren:degerlendiren_id(isim, avatar_url), guvenilirlik, beceri, takim_ruhu')
+        .eq('degerlendirilen_id', hedefId)
+        .not('yorum', 'is', null)
+        .neq('yorum', '')
+        .order('olusturuldu', { ascending: false })
+        .limit(10)
+      setYorumlar(yorumData || [])
 
       setYukleniyor(false)
     }
@@ -2747,6 +2783,24 @@ function KullaniciProfil({ kullanici, hedefId, geriDon, onMesajAc, onKullaniciTi
             <p style={{ fontSize: 13, color: '#aaa' }}>Henüz maç yok</p>
           </div>
         )}
+        {yorumlar.length > 0 && (
+  <>
+    <p style={{ fontSize: 14, fontWeight: 600, margin: '16px 0 12px', color: '#1a1a1a' }}>Yorumlar</p>
+    {yorumlar.map((y, i) => (
+      <div key={i} style={{ background: '#fff', borderRadius: 14, padding: '12px 14px', marginBottom: 10, border: '0.5px solid #ebebE8' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+          {y.degerlendiren?.avatar_url
+            ? <img src={y.degerlendiren.avatar_url} style={{ width: 28, height: 28, borderRadius: '50%', objectFit: 'cover' }} alt="" />
+            : <div style={{ width: 28, height: 28, borderRadius: '50%', background: '#e8f7f1', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, color: '#0F6E56' }}>{y.degerlendiren?.isim?.slice(0,1)}</div>
+          }
+          <span style={{ fontSize: 13, fontWeight: 600, color: '#1a1a1a' }}>{y.degerlendiren?.isim}</span>
+          <span style={{ fontSize: 11, color: '#aaa', marginLeft: 'auto' }}>⭐ {((y.guvenilirlik + y.beceri + y.takim_ruhu) / 3).toFixed(1)}</span>
+        </div>
+        <p style={{ fontSize: 13, color: '#555', margin: 0, lineHeight: 1.5 }}>{y.yorum}</p>
+      </div>
+    ))}
+  </>
+)}
       </div>
     </div>
   </div>
