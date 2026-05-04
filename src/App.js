@@ -363,7 +363,7 @@ function AnaSayfa({ kullanici, macaGit, onMaclarYuklendi, setAktifEkran }) {
   setYukleniyor(true)
   const { data } = await supabase
   .from('maclar')
-  .select(`*, kullanicilar!maclar_organizator_id_fkey(isim, avatar_url), katilimlar(id, durum, kullanicilar(isim, avatar_url))`)
+.select(`*, kullanicilar!maclar_organizator_id_fkey(isim, avatar_url), katilimlar(id, durum, kullanici_id, kullanicilar(isim, avatar_url))`)
   .gte('saat', new Date().toISOString())
   .order('saat', { ascending: true })
   setMaclar(data || [])
@@ -709,7 +709,7 @@ const aktifFiltreVar = ilceFiltre !== 'Tümü' || saatFiltre !== 'Tümü' || ilF
             )}
           </div>
          ) : filtreliMaclar.map(mac => (
-          <MacKart key={mac.id} mac={mac} onClick={() => macaGit(mac)} />
+          <MacKart key={mac.id} mac={mac} onClick={() => macaGit(mac)} kullanici={kullanici} />
         ))}
       </div>
     </div>
@@ -717,12 +717,16 @@ const aktifFiltreVar = ilceFiltre !== 'Tümü' || saatFiltre !== 'Tümü' || ilF
   )
 }
 
-function MacKart({ mac, onClick }) {
+function MacKart({ mac, onClick, kullanici }) {
   const katilan = mac.katilimlar?.filter(k => k.durum === 'onaylandi').length || 0
   const acikYer = mac.toplam_kisi - katilan
   const doluluk = (katilan / mac.toplam_kisi) * 100
   const acil = acikYer <= 2 && acikYer > 0
   const dolu = acikYer <= 0
+  const benimKatilimim = kullanici ? mac.katilimlar?.find(k => k.kullanici_id === kullanici.id) : null
+  const katilindi = benimKatilimim?.durum
+  const benOrganizatorum = kullanici?.id === mac.organizator_id
+
 
   return (
    <div onClick={onClick} style={{
@@ -791,17 +795,22 @@ function MacKart({ mac, onClick }) {
             </div>
             <span style={{ fontSize: 11, color: '#aaa', marginLeft: 10 }}>{katilan}/{mac.toplam_kisi} oyuncu</span>
           </div>
-         <button
-  onClick={e => { e.stopPropagation(); onClick() }}
-  style={{
-    fontSize: 12, fontWeight: 600, padding: '6px 14px', borderRadius: 20, border: 'none', cursor: dolu ? 'default' : 'pointer',
-    background: dolu ? '#f5f5f3' : acil ? '#fdecea' : '#1D9E75',
-    color: dolu ? '#aaa' : acil ? '#c0392b' : '#fff',
-    letterSpacing: -0.2,
-  }}
->
-  {dolu ? 'Dolu' : acil ? `${acikYer} yer kaldı!` : 'Katıl'}
-</button>
+       {benOrganizatorum ? (
+  <span style={{ fontSize: 12, fontWeight: 600, padding: '6px 14px', borderRadius: 20, background: '#e8f7f1', color: '#0F6E56' }}>
+    Senin ilanın
+  </span>
+) : (
+  <button
+    onClick={e => { e.stopPropagation(); onClick() }}
+    style={{
+      fontSize: 12, fontWeight: 600, padding: '6px 14px', borderRadius: 20, border: 'none', cursor: dolu ? 'default' : 'pointer',
+      background: katilindi === 'onaylandi' ? '#e8f7f1' : katilindi === 'bekliyor' ? '#f5f5f3' : dolu ? '#f5f5f3' : acil ? '#fdecea' : '#1D9E75',
+      color: katilindi === 'onaylandi' ? '#0F6E56' : katilindi === 'bekliyor' ? '#aaa' : dolu ? '#aaa' : acil ? '#c0392b' : '#fff',
+    }}
+  >
+    {katilindi === 'onaylandi' ? 'Katıldın' : katilindi === 'bekliyor' ? 'Bekliyor' : dolu ? 'Dolu' : acil ? `${acikYer} yer kaldı!` : 'Katıl'}
+  </button>
+)}
         </div>
       <div style={{ height: 4, background: '#f0f0ee', borderRadius: 2, marginTop: 12, marginBottom: 2 }}>
   <div style={{
@@ -1105,21 +1114,21 @@ const mesajGonder = async () => {
             <div style={{ width: `${(katilimSayisi / mac.toplam_kisi) * 100}%`, height: '100%', borderRadius: 3, background: '#1D9E75', transition: 'width 0.3s' }} />
           </div>
                     {mac.lat && mac.lng && (
-  <div style={{ background: '#fff', borderRadius: 16, padding: '14px 16px', marginBottom: 14, border: '0.5px solid #ebebE8' }}>
-    <p style={{ fontSize: 12, color: '#aaa', margin: '0 0 8px' }}>Konum</p>
-    <div style={{ height: 140, borderRadius: 10, overflow: 'hidden', cursor: 'pointer' }} onClick={() => window.open(`https://www.google.com/maps?q=${mac.lat},${mac.lng}`, '_blank')}>
-      <MapContainer center={[mac.lat, mac.lng]} zoom={15} style={{ width: '100%', height: '100%' }} zoomControl={false} dragging={false} scrollWheelZoom={false} doubleClickZoom={false} touchZoom={false}>
-        <TileLayer url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png" />
-        <Marker position={[mac.lat, mac.lng]} icon={new L.DivIcon({
-  className: '',
-  html: `<div style="width:14px;height:14px;background:#1D9E75;border:3px solid #fff;border-radius:50%;box-shadow:0 2px 6px rgba(29,158,117,0.5);"></div>`,
-  iconSize: [14, 14],
-  iconAnchor: [7, 7],
-})} />
-      </MapContainer>
-    </div>
-  </div>
-)}
+          <div style={{ background: '#fff', borderRadius: 16, padding: '14px 16px', marginBottom: 14, border: '0.5px solid #ebebE8' }}>
+            <p style={{ fontSize: 12, color: '#aaa', margin: '0 0 8px' }}>Konum</p>
+            <div style={{ height: 140, borderRadius: 10, overflow: 'hidden', cursor: 'pointer' }} onClick={() => window.open(`https://www.google.com/maps?q=${mac.lat},${mac.lng}`, '_blank')}>
+              <MapContainer center={[mac.lat, mac.lng]} zoom={15} style={{ width: '100%', height: '100%' }} zoomControl={false} dragging={false} scrollWheelZoom={false} doubleClickZoom={false} touchZoom={false}>
+                <TileLayer url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png" />
+                <Marker position={[mac.lat, mac.lng]} icon={new L.DivIcon({
+          className: '',
+          html: `<div style="width:14px;height:14px;background:#1D9E75;border:3px solid #fff;border-radius:50%;box-shadow:0 2px 6px rgba(29,158,117,0.5);"></div>`,
+          iconSize: [14, 14],
+          iconAnchor: [7, 7],
+            })} />
+                  </MapContainer>
+                </div>
+              </div>
+            )}
 
           {!benOrganizatorum && (
             <button onClick={katil} disabled={katilindi || yukleniyor || acikYer <= 0} style={{
@@ -1485,7 +1494,14 @@ if (!sahaAdi || !il || !ilce || !saat) { setHata('Lütfen tüm zorunlu alanları
       {/* Tarih ve saat */}
       <div style={{ background: '#fff', borderRadius: 16, padding: '14px 16px', marginBottom: 12, border: '0.5px solid #ebebE8', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
         <p style={{ fontSize: 11, color: '#aaa', margin: '0 0 6px', fontWeight: 500, textTransform: 'uppercase', letterSpacing: 0.5 }}>Tarih ve saat *</p>
-<input type="datetime-local" style={{ width: '100%', border: 'none', outline: 'none', fontSize: 15, color: '#1a1a1a', background: 'none', fontWeight: 500, cursor: 'pointer' }}          value={saat} onChange={e => setSaat(e.target.value)} />
+            <div style={{ display: 'flex', gap: 10 }}>
+  <input type="date" style={{ flex: 1, border: 'none', outline: 'none', fontSize: 15, color: '#1a1a1a', background: 'none', fontWeight: 500, cursor: 'pointer' }}
+    value={saat ? saat.split('T')[0] : ''}
+    onChange={e => setSaat(prev => e.target.value + 'T' + (prev?.split('T')[1] || '00:00'))} />
+  <input type="time" style={{ flex: 1, border: 'none', outline: 'none', fontSize: 15, color: '#1a1a1a', background: 'none', fontWeight: 500, cursor: 'pointer' }}
+    value={saat ? saat.split('T')[1] : ''}
+    onChange={e => setSaat(prev => (prev?.split('T')[0] || '') + 'T' + e.target.value)} />
+</div>
       </div>
 
       {/* Kaça Kaç */}
