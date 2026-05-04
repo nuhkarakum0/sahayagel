@@ -341,6 +341,8 @@ function AnaSayfa({ kullanici, macaGit, onMaclarYuklendi, setAktifEkran }) {
   const [ilFiltre, setIlFiltre] = useState('Tümü')
   const [formatFiltre, setFormatFiltre] = useState('Tümü')
   const [seviyeFiltre, setSeviyeFiltre] = useState('Tümü')
+  const [touchBaslangic, setTouchBaslangic] = useState(0)
+
   
 
   const filtreler = ['Tümü', 'Bu akşam']
@@ -579,7 +581,15 @@ const aktifFiltreVar = ilceFiltre !== 'Tümü' || saatFiltre !== 'Tümü' || ilF
       </div>
       <div style={{ flex: 1, overflowY: 'auto' }}>
       {/* Banner Slider */}
-  <div style={{ margin: '12px 22px 0', position: 'relative', borderRadius: 16, overflow: 'hidden', height: 140, flexShrink: 0 }}>
+<div
+  style={{ margin: '12px 22px 0', position: 'relative', borderRadius: 16, overflow: 'hidden', height: 120, flexShrink: 0 }}
+  onTouchStart={e => setTouchBaslangic(e.touches[0].clientX)}
+  onTouchEnd={e => {
+    const fark = touchBaslangic - e.changedTouches[0].clientX
+    if (fark > 50) setAktifSlide(prev => (prev + 1) % 3)
+    else if (fark < -50) setAktifSlide(prev => (prev - 1 + 3) % 3)
+  }}
+>
   {[
     {
       baslik: 'Maç bul, sahaya gel!',
@@ -784,8 +794,8 @@ function DetaySayfa({ mac, kullanici, geriDon, onKullaniciTikla }) {
     .order('olusturuldu', { ascending: true })
   setKatilimlar(data || [])
   const benimKatilimim = (data || []).find(k => k.kullanici_id === kullanici.id)
-  if (benimKatilimim) setKatilindi(true)
-  setKatilimYukleniyor(false)
+if (benimKatilimim) setKatilindi(benimKatilimim.durum)
+    setKatilimYukleniyor(false)
 }, [mac.id, kullanici.id])
 
 const mesajlariGetir = useCallback(async () => {
@@ -1048,10 +1058,10 @@ const mesajGonder = async () => {
           {!benOrganizatorum && (
             <button onClick={katil} disabled={katilindi || yukleniyor || acikYer <= 0} style={{
               width: '100%', padding: 14, border: 'none', borderRadius: 14, fontSize: 15, fontWeight: 500, cursor: katilindi ? 'default' : 'pointer',
-              background: katilindi ? '#e8f7f1' : acikYer <= 0 ? '#eee' : '#1D9E75',
-              color: katilindi ? '#0F6E56' : acikYer <= 0 ? '#aaa' : '#fff',
+              background: katilindi === 'onaylandi' ? '#1D9E75' : katilindi === 'reddedildi' ? '#fdecea' : katilindi ? '#e8f7f1' : acikYer <= 0 ? '#eee' : '#1D9E75',
+              color: katilindi === 'onaylandi' ? '#fff' : katilindi === 'reddedildi' ? '#c0392b' : katilindi ? '#0F6E56' : acikYer <= 0 ? '#aaa' : '#fff',
             }}>
-              {katilindi ? '✓ Başvurun alındı, onay bekleniyor' : acikYer <= 0 ? 'Maç dolu' : yukleniyor ? 'Gönderiliyor...' : 'Katılmak istiyorum'}
+          {katilindi === 'onaylandi' ? '✓ Onaylandın!' : katilindi === 'reddedildi' ? '✗ Başvurun reddedildi' : katilindi ? '✓ Başvurun alındı, onay bekleniyor' : acikYer <= 0 ? 'Maç dolu' : yukleniyor ? 'Gönderiliyor...' : 'Katılmak istiyorum'}
             </button>
           )}
         </div>
