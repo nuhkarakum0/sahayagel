@@ -5,6 +5,7 @@ import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from 'react-leaf
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { getCities, getDistrictsByCityCode } from 'turkey-neighbourhoods'
+import { StatusBar as CapStatusBar, Style } from '@capacitor/status-bar'
 // Leaflet ikon düzeltmesi
 delete L.Icon.Default.prototype._getIconUrl
 L.Icon.Default.mergeOptions({
@@ -38,8 +39,13 @@ export default function App() {
   const [seciliOzelMesaj, setSeciliOzelMesaj] = useState(null)
   const [degerlendirmeMac, setDegerlendirmeMac] = useState(null)
   const [degerlendirmeKatilimcilar, setDegerlendirmeKatilimcilar] = useState([])
-  
 
+useEffect(() => {
+  CapStatusBar.setOverlaysWebView({ overlay: false })
+  CapStatusBar.setBackgroundColor({ color: '#f8f8f6' })
+  const dark = window.matchMedia('(prefers-color-scheme: dark)').matches
+  CapStatusBar.setStyle({ style: dark ? Style.Dark : Style.Light })
+}, [])
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setKullanici(session?.user ?? null)
@@ -221,8 +227,7 @@ macaGit={(mac) => {
               </div>
             )}
 
-<AltNav aktifEkran={aktifEkran} setAktifEkran={setAktifEkran} okunmamisSayisi={okunmamisSayisi} kullanici={kullanici} isAdmin={isAdmin} />
-          </>
+<AltNav aktifEkran={aktifEkran} setAktifEkran={setAktifEkran} okunmamisSayisi={okunmamisSayisi} kullanici={kullanici} isAdmin={isAdmin} />        </>
         )}
       </div>
     </div>
@@ -1077,6 +1082,15 @@ const mesajGonder = async () => {
       {/* Yeşil header */}
       <div style={{ background: '#1D9E75', padding: '16px 22px 20px', flexShrink: 0 }}>
         <span onClick={geriDon} style={{ color: '#fff', fontSize: 26, cursor: 'pointer', opacity: 0.8, display: 'inline-block', marginBottom: 8 }}>‹</span>
+        {benOrganizatorum && (
+  <button onClick={async () => {
+    if (!window.confirm('İlanı silmek istediğine emin misin?')) return
+    await supabase.from('maclar').delete().eq('id', mac.id)
+    geriDon()
+  }} style={{ float: 'right', background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: 10, padding: '6px 14px', color: '#fff', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>
+    Sil
+  </button>
+)}
         {benOrganizatorum && (
   <button onClick={async () => {
     if (!window.confirm('İlanı silmek istediğine emin misin?')) return
@@ -3443,8 +3457,9 @@ function AltNav({ aktifEkran, setAktifEkran, okunmamisSayisi, kullanici, isAdmin
   ]
   
   return (
-    <div style={{ background: '#fff', borderTop: '0.5px solid #ebebE8', display: 'flex', flexShrink: 0, paddingBottom: 4 }}>
-      {items.map(item => {
+<div style={{ background: '#fff', borderTop: '0.5px solid #ebebE8', display: 'flex', flexShrink: 0, padding: '10px 0',
+paddingBottom: 'max(6px, env(safe-area-inset-bottom))', }}>
+        {items.map(item => {
         return (
           <button key={item.id} onClick={() => {
             if (!kullanici && item.id !== 'anasayfa') {
@@ -3454,7 +3469,7 @@ function AltNav({ aktifEkran, setAktifEkran, okunmamisSayisi, kullanici, isAdmin
             setAktifEkran(item.id)
           }} style={{
             flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
-            padding: '10px 0 14px', border: 'none', background: 'none', cursor: 'pointer', position: 'relative'
+            padding: '10px 0 6px', border: 'none', background: 'none', cursor: 'pointer', position: 'relative'
           }}>
             <div style={{ position: 'relative' }}>
               <div style={{
@@ -3473,10 +3488,11 @@ function AltNav({ aktifEkran, setAktifEkran, okunmamisSayisi, kullanici, isAdmin
               )}
             </div>
             <span style={{
-              fontSize: 10, letterSpacing: -0.2,
-              color: aktifEkran === item.id ? '#1D9E75' : '#bbb',
-              fontWeight: aktifEkran === item.id ? 600 : 400,
-            }}>{item.label}</span>
+  fontSize: 10, letterSpacing: -0.2,
+  color: aktifEkran === item.id ? '#1D9E75' : '#bbb',
+  fontWeight: aktifEkran === item.id ? 600 : 400,
+  opacity: 1,
+}}>{item.label}</span>
           </button>
         )
       })}
@@ -3485,8 +3501,8 @@ function AltNav({ aktifEkran, setAktifEkran, okunmamisSayisi, kullanici, isAdmin
 }
 
 const st = {
-  kapsayici: { height: '100vh', display: 'flex', flexDirection: 'column', background: '#f8f8f6', overflow: 'hidden' },
-  telefon: { width: '100%', maxWidth: '100vw', background: '#f8f8f6', borderRadius: 0, display: 'flex', flexDirection: 'column', height: '100vh', boxShadow: 'none', overflow: 'hidden', position: 'relative' },
+  kapsayici: { height: '100dvh', display: 'flex', flexDirection: 'column', background: '#f8f8f6', overflow: 'hidden', paddingTop: 'env(safe-area-inset-top)' },
+  telefon: { width: '100%', maxWidth: '100vw', background: '#f8f8f6', borderRadius: 0, display: 'flex', flexDirection: 'column', height: '100dvh', boxShadow: 'none', overflow: 'hidden', position: 'relative' },
   anaButon: { width: '100%', padding: 14, background: '#1D9E75', color: '#fff', border: 'none', borderRadius: 14, fontSize: 15, fontWeight: 500, cursor: 'pointer' },
   label: { fontSize: 12, color: '#888', margin: '0 0 6px' },
   input: { width: '100%', background: '#fff', border: '0.5px solid #e8e8e4', borderRadius: 12, padding: '11px 14px', fontSize: 14, color: '#1a1a1a', marginBottom: 16, outline: 'none' },
