@@ -332,6 +332,18 @@ function AnaSayfa({ kullanici, macaGit, onMaclarYuklendi, setAktifEkran }) {
   const [maclar, setMaclar] = useState([])
   const [aktifSlide, setAktifSlide] = useState(0)
   const [yukleniyor, setYukleniyor] = useState(true)
+  const [profilAvatar, setProfilAvatar] = useState(null)
+  const [profilIsim, setProfilIsim] = useState(null)
+
+  useEffect(() => {
+  if (!kullanici) return
+  supabase.from('kullanicilar').select('avatar_url, isim').eq('id', kullanici.id).single()
+    .then(({ data }) => {
+      if (data?.avatar_url) setProfilAvatar(data.avatar_url)
+      if (data?.isim) setProfilIsim(data.isim.split(' ')[0])
+    })
+}, [kullanici?.id])
+
   const [aktifFiltre, setAktifFiltre] = useState('Tümü')
   const [aramaMetni, setAramaMetni] = useState('')
   const [aramaAcik, setAramaAcik] = useState(false)
@@ -342,6 +354,7 @@ function AnaSayfa({ kullanici, macaGit, onMaclarYuklendi, setAktifEkran }) {
   const [formatFiltre, setFormatFiltre] = useState('Tümü')
   const [seviyeFiltre, setSeviyeFiltre] = useState('Tümü')
   const [touchBaslangic, setTouchBaslangic] = useState(0)
+  
 
   
 
@@ -350,7 +363,7 @@ function AnaSayfa({ kullanici, macaGit, onMaclarYuklendi, setAktifEkran }) {
   setYukleniyor(true)
   const { data } = await supabase
   .from('maclar')
-  .select(`*, kullanicilar!maclar_organizator_id_fkey(isim, avatar_url), katilimlar(id, durum)`)
+  .select(`*, kullanicilar!maclar_organizator_id_fkey(isim, avatar_url), katilimlar(id, durum, kullanicilar(isim, avatar_url))`)
   .gte('saat', new Date().toISOString())
   .order('saat', { ascending: true })
   setMaclar(data || [])
@@ -429,7 +442,7 @@ const aktifFiltreVar = ilceFiltre !== 'Tümü' || saatFiltre !== 'Tümü' || ilF
     <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
 
       {/* Header */}
-      <div style={{ padding: '8px 22px 14px', flexShrink: 0 }}>
+      <div style={{ padding: '20px 22px 14px', flexShrink: 0 }}>
         {aramaAcik ? (
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <div style={{ flex: 1, background: '#fff', borderRadius: 14, border: '1.5px solid #1D9E75', padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -456,12 +469,22 @@ const aktifFiltreVar = ilceFiltre !== 'Tümü' || saatFiltre !== 'Tümü' || ilF
           <>
 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
   <div>
-    <p style={{ fontSize: 12, color: '#aaa', margin: '0 0 6px', fontWeight: 400, letterSpacing: 0.5, textTransform: 'uppercase' }}>Merhaba 👋</p>
+    <p style={{ fontSize: 12, color: '#aaa', margin: '0 0 6px', fontWeight: 400, letterSpacing: 0.5, textTransform: 'uppercase' }}>Merhaba{profilIsim ? `, ${profilIsim}` : ''} 👋</p>
     <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0, letterSpacing: -0.8, color: '#1a1a1a', lineHeight: 1.1 }}>
 <span style={{ color: '#1D9E75' }}>{filtreliMaclar.length} maç</span> seni bekliyor
     </h1>
   </div>
- <img src="/logo.png" alt="Sahaya Gel" style={{ width: 48, height: 48, borderRadius: 18, marginBottom: 20, objectFit: 'cover' }} />
+ <div onClick={() => kullanici && setAktifEkran('profil')} style={{ cursor: kullanici ? 'pointer' : 'default', flexShrink: 0 }}>
+  {kullanici && profilAvatar ? (
+    <img src={profilAvatar} alt="profil" style={{ width: 48, height: 48, borderRadius: '50%', objectFit: 'cover', border: '2px solid #e8f7f1' }} />
+  ) : kullanici ? (
+    <div style={{ width: 48, height: 48, borderRadius: '50%', background: '#e8f7f1', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 700, color: '#1D9E75', border: '2px solid #d0f0e5' }}>
+      {kullanici.email?.slice(0, 1).toUpperCase() || '?'}
+    </div>
+  ) : (
+    <img src="/logo.png" alt="Sahaya Gel" style={{ width: 48, height: 48, borderRadius: 18, objectFit: 'cover' }} />
+  )}
+</div>
 </div>
           </>
         )}
@@ -641,26 +664,51 @@ const aktifFiltreVar = ilceFiltre !== 'Tümü' || saatFiltre !== 'Tümü' || ilF
   </div>
 </div>
 
+<div style={{ display: 'flex', gap: 8, padding: '14px 22px 0' }}>
+  {[
+    { label: 'İlan aç', ekran: 'ilan' },
+    { label: 'Haritada ara', ekran: 'harita' },
+    { label: 'Arkadaş bul', ekran: 'arkadaslar' },
+  ].map(s => (
+    <button key={s.ekran} onClick={() => setAktifEkran(s.ekran)} style={{
+      flex: 1, padding: '8px 4px', background: '#fff', border: '0.5px solid #ebebE8',
+      borderRadius: 12, cursor: 'pointer', fontSize: 12, fontWeight: 500, color: '#555',
+      boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+    }}>
+      {s.label}
+    </button>
+  ))}
+</div>
+
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', padding: '16px 22px 8px'}}>
         <p style={{ fontSize: 15, fontWeight: 500, margin: 0 }}>
           {aramaMetni ? `"${aramaMetni}" sonuçları` : 'Yakındaki maçlar'}
         </p>
-        <span onClick={() => setAktifEkran('harita')} style={{ fontSize: 12, color: '#1D9E75', fontWeight: 500, cursor: 'pointer' }}>Haritada gör</span>
       </div>
         <div style={{ padding: '0 22px', display: 'flex', flexDirection: 'column', gap: 12, paddingBottom: 16 }}>
         {yukleniyor ? (
           <p style={{ color: '#aaa', fontSize: 14, textAlign: 'center', padding: '40px 0' }}>Maçlar yükleniyor...</p>
         ) : filtreliMaclar.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '40px 0' }}>
+          <div style={{ textAlign: 'center', padding: '40px 22px' }}>
             <p style={{ fontSize: 40, margin: '0 0 12px' }}>⚽</p>
-            <p style={{ fontSize: 14, color: '#aaa' }}>
-              {aramaMetni ? `"${aramaMetni}" için sonuç bulunamadı` : 'Bu filtrede maç yok'}
+            <p style={{ fontSize: 14, color: '#aaa', margin: '0 0 20px' }}>
+              {aramaMetni ? `"${aramaMetni}" için sonuç bulunamadı` : 'Yakınında henüz maç yok'}
             </p>
-            <button onClick={() => { setAramaMetni(''); setIlceFiltre('Tümü'); setSaatFiltre('Tümü'); setAktifFiltre('Tümü') }} style={{ fontSize: 13, color: '#1D9E75', background: 'none', border: 'none', cursor: 'pointer', marginTop: 8, fontWeight: 500 }}>
-              Filtreleri temizle
-            </button>
+            {!aramaMetni && (
+              <button onClick={() => setAktifEkran('ilan')} style={{
+                padding: '12px 24px', background: '#1D9E75', color: '#fff', border: 'none',
+                borderRadius: 14, fontSize: 14, fontWeight: 600, cursor: 'pointer',
+              }}>
+                İlk ilanı sen aç!
+              </button>
+            )}
+            {aramaMetni && (
+              <button onClick={() => { setAramaMetni(''); setIlceFiltre('Tümü'); setSaatFiltre('Tümü'); setAktifFiltre('Tümü') }} style={{ fontSize: 13, color: '#1D9E75', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 500 }}>
+                Filtreleri temizle
+              </button>
+            )}
           </div>
-        ) : filtreliMaclar.map(mac => (
+         ) : filtreliMaclar.map(mac => (
           <MacKart key={mac.id} mac={mac} onClick={() => macaGit(mac)} />
         ))}
       </div>
@@ -728,9 +776,11 @@ function MacKart({ mac, onClick }) {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <div style={{ display: 'flex' }}>
-              {Array.from({ length: Math.min(katilan, 5) }).map((_, i) => (
-                <div key={i} style={{ width: 20, height: 20, borderRadius: '50%', background: `hsl(${160 + i * 20}, 50%, 60%)`, border: '2px solid #fff', marginRight: -6, fontSize: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 600 }}>
-                  {String.fromCharCode(65 + i)}
+              {(mac.katilimlar || []).filter(k => k.durum === 'onaylandi').slice(0, 5).map((k, i) => (
+                <div key={i} style={{ width: 20, height: 20, borderRadius: '50%', border: '2px solid #fff', marginRight: -6, overflow: 'hidden', flexShrink: 0, background: '#e8f7f1', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 7, fontWeight: 700, color: '#0F6E56' }}>
+                  {k.kullanicilar?.avatar_url
+                    ? <img src={k.kullanicilar.avatar_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" />
+                    : (k.kullanicilar?.isim?.slice(0, 1) || '?')}
                 </div>
               ))}
               {katilan > 5 && (
@@ -1054,6 +1104,22 @@ const mesajGonder = async () => {
           <div style={{ height: 6, background: '#eee', borderRadius: 3, marginBottom: 20 }}>
             <div style={{ width: `${(katilimSayisi / mac.toplam_kisi) * 100}%`, height: '100%', borderRadius: 3, background: '#1D9E75', transition: 'width 0.3s' }} />
           </div>
+                    {mac.lat && mac.lng && (
+  <div style={{ background: '#fff', borderRadius: 16, padding: '14px 16px', marginBottom: 14, border: '0.5px solid #ebebE8' }}>
+    <p style={{ fontSize: 12, color: '#aaa', margin: '0 0 8px' }}>Konum</p>
+    <div style={{ height: 140, borderRadius: 10, overflow: 'hidden', cursor: 'pointer' }} onClick={() => window.open(`https://www.google.com/maps?q=${mac.lat},${mac.lng}`, '_blank')}>
+      <MapContainer center={[mac.lat, mac.lng]} zoom={15} style={{ width: '100%', height: '100%' }} zoomControl={false} dragging={false} scrollWheelZoom={false} doubleClickZoom={false} touchZoom={false}>
+        <TileLayer url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png" />
+        <Marker position={[mac.lat, mac.lng]} icon={new L.DivIcon({
+  className: '',
+  html: `<div style="width:14px;height:14px;background:#1D9E75;border:3px solid #fff;border-radius:50%;box-shadow:0 2px 6px rgba(29,158,117,0.5);"></div>`,
+  iconSize: [14, 14],
+  iconAnchor: [7, 7],
+})} />
+      </MapContainer>
+    </div>
+  </div>
+)}
 
           {!benOrganizatorum && (
             <button onClick={katil} disabled={katilindi || yukleniyor || acikYer <= 0} style={{
@@ -1066,6 +1132,8 @@ const mesajGonder = async () => {
           )}
         </div>
       )}
+
+      
 
       {/* Başvurular tab — sadece organizatör görür */}
       {aktifTab === 'basvurular' && (
@@ -2350,7 +2418,7 @@ for (const hedefId of kontrolEdilecekler) {
   if (
     hedefProfil?.ortalama_puan >= 4.5 &&
     hedefProfil?.degerlendirme_sayisi >= 5 &&
-    macSayisi >= 1
+    macSayisi >= 5
   ) {
     await supabase
       .from('kullanicilar')
