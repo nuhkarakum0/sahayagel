@@ -93,14 +93,17 @@ export default function App() {
     <div style={st.kapsayici}>
       <div style={st.telefon}>
         <StatusBar />
-        {!kullanici ? (
-          <GirisSayfa setKullanici={setKullanici} />
-        ) : (
+        {aktifEkran === 'giris' ? (
+  <GirisSayfa setKullanici={setKullanici} geriDon={() => setAktifEkran('anasayfa')} />
+) : (
           <>
           {aktifEkran === 'anasayfa' && (
            <AnaSayfa
   kullanici={kullanici}
-  macaGit={(mac) => { setSeciliMac(mac); setAktifEkran('detay') }}
+macaGit={(mac) => {
+  if (!kullanici) { setAktifEkran('giris'); return }
+  setSeciliMac(mac); setAktifEkran('detay')
+}}
   onMaclarYuklendi={(data) => setMaclar(data)}
   setAktifEkran={setAktifEkran}
 />
@@ -113,14 +116,14 @@ export default function App() {
                 onKullaniciTikla={(id) => setHedefKullanici(id)}
               />
             )}
-            {aktifEkran === 'ilan' && (
-  <IlanSayfa
-    kullanici={kullanici}
-    bitti={() => setAktifEkran('anasayfa')}
-    geriDon={() => setAktifEkran('anasayfa')}
-  />
-)}
-   {aktifEkran === 'bildirim' && (
+            {aktifEkran === 'ilan' && kullanici && (
+              <IlanSayfa
+                kullanici={kullanici}
+                bitti={() => setAktifEkran('anasayfa')}
+                geriDon={() => setAktifEkran('anasayfa')}
+              />
+            )}
+   {aktifEkran === 'bildirim' && kullanici && (
   <BildirimSayfa
     kullanici={kullanici}
     onKullaniciTikla={(id) => setHedefKullanici(id)}
@@ -135,14 +138,15 @@ export default function App() {
 )}
             {aktifEkran === 'harita' && (
               <HaritaSayfa
-               maclar={maclar}
-              geriDon={() => setAktifEkran('anasayfa')}
-             />
+                maclar={maclar}
+                geriDon={() => setAktifEkran('anasayfa')}
+                macaGit={(mac) => { setSeciliMac(mac); setAktifEkran('detay') }}
+              />
             )}
-            {aktifEkran === 'profil' && (
-              <ProfilSayfa kullanici={kullanici} setKullanici={setKullanici} geriDon={() => setAktifEkran('anasayfa')} />
-            )}
-            {aktifEkran === 'arkadaslar' && (
+            {aktifEkran === 'profil' && kullanici && (
+  <ProfilSayfa kullanici={kullanici} setKullanici={setKullanici} geriDon={() => setAktifEkran('anasayfa')} />
+)}
+           {aktifEkran === 'arkadaslar' && kullanici && (
               <ArkadaslarSayfa
                 kullanici={kullanici}
                 onKullaniciTikla={(id) => setHedefKullanici(id)}
@@ -162,7 +166,7 @@ export default function App() {
             )}
 
            {hedefKullanici && (
-  <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: '#f8f8f6', zIndex: 300, display: 'flex', flexDirection: 'column' }}>
+                <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: '#f8f8f6', zIndex: 300, display: 'flex', flexDirection: 'column' }}>
                 <KullaniciProfil
                     kullanici={kullanici}
                     hedefId={hedefKullanici}
@@ -176,7 +180,7 @@ export default function App() {
               </div>
             )}
 
-            <AltNav aktifEkran={aktifEkran} setAktifEkran={setAktifEkran} okunmamisSayisi={okunmamisSayisi} />
+<AltNav aktifEkran={aktifEkran} setAktifEkran={setAktifEkran} okunmamisSayisi={okunmamisSayisi} kullanici={kullanici} />
           </>
         )}
       </div>
@@ -188,7 +192,7 @@ function StatusBar() {
   return null
 }
 
-function GirisSayfa({ setKullanici }) {
+function GirisSayfa({ setKullanici, geriDon }) {
   const [mod, setMod] = useState('giris')
   const [email, setEmail] = useState('')
   const [sifre, setSifre] = useState('')
@@ -197,12 +201,12 @@ function GirisSayfa({ setKullanici }) {
   const [yukleniyor, setYukleniyor] = useState(false)
 
   const girisYap = async () => {
-    setYukleniyor(true); setHata('')
-    const { error } = await supabase.auth.signInWithPassword({ email, password: sifre })
-    if (error) setHata('Email veya şifre hatalı.')
-    setYukleniyor(false)
-  }
-
+  setYukleniyor(true); setHata('')
+  const { error } = await supabase.auth.signInWithPassword({ email, password: sifre })
+  if (error) { setHata('Email veya şifre hatalı.'); setYukleniyor(false); return }
+  setYukleniyor(false)
+  if (geriDon) geriDon()
+}
   const kayitOl = async () => {
     setYukleniyor(true); setHata('')
     const { data, error } = await supabase.auth.signUp({ email, password: sifre })
@@ -214,10 +218,18 @@ function GirisSayfa({ setKullanici }) {
   }
 
  return (
+  
   <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
 
     <div style={{ background: 'linear-gradient(145deg, #1D9E75 0%, #0a7055 100%)', padding: '44px 28px 36px', flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', position: 'relative', overflow: 'hidden' }}>
   
+{geriDon && (
+  <div style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', alignSelf: 'flex-start' }} onClick={geriDon}>
+    <span style={{ fontSize: 22, color: '#fff', fontWeight: 600 }}>‹</span>
+    <span style={{ fontSize: 14, color: '#fff', fontWeight: 500, opacity: 0.9 }}>Geri</span>
+  </div>
+)}
+
   {/* Dekoratif çemberler */}
   <div style={{ position: 'absolute', top: -40, right: -40, width: 160, height: 160, borderRadius: '50%', border: '1.5px solid rgba(255,255,255,0.1)' }} />
   <div style={{ position: 'absolute', top: -20, right: -20, width: 100, height: 100, borderRadius: '50%', border: '1.5px solid rgba(255,255,255,0.1)' }} />
@@ -283,6 +295,7 @@ function GirisSayfa({ setKullanici }) {
 
 function AnaSayfa({ kullanici, macaGit, onMaclarYuklendi, setAktifEkran }) {
   const [maclar, setMaclar] = useState([])
+  const [aktifSlide, setAktifSlide] = useState(0)
   const [yukleniyor, setYukleniyor] = useState(true)
   const [aktifFiltre, setAktifFiltre] = useState('Tümü')
   const [aramaMetni, setAramaMetni] = useState('')
@@ -293,9 +306,10 @@ function AnaSayfa({ kullanici, macaGit, onMaclarYuklendi, setAktifEkran }) {
   const [ilFiltre, setIlFiltre] = useState('Tümü')
   const [formatFiltre, setFormatFiltre] = useState('Tümü')
   const [seviyeFiltre, setSeviyeFiltre] = useState('Tümü')
+  
 
   const filtreler = ['Tümü', 'Bu akşam']
- const maclariGetir = async () => {
+  const maclariGetir = async () => {
   setYukleniyor(true)
   const { data } = await supabase
     .from('maclar')
@@ -305,7 +319,12 @@ function AnaSayfa({ kullanici, macaGit, onMaclarYuklendi, setAktifEkran }) {
   onMaclarYuklendi(data || [])
   setYukleniyor(false)
 }
-
+useEffect(() => {
+  const timer = setInterval(() => {
+    setAktifSlide(prev => (prev + 1) % 3)
+  }, 3000)
+  return () => clearInterval(timer)
+}, [])
 // eslint-disable-next-line react-hooks/exhaustive-deps
 useEffect(() => { maclariGetir() }, [])
 
@@ -522,15 +541,67 @@ const aktifFiltreVar = ilceFiltre !== 'Tümü' || saatFiltre !== 'Tümü' || ilF
 }}>{f}</button>
         ))}
       </div>
+      <div style={{ flex: 1, overflowY: 'auto' }}>
+      {/* Banner Slider */}
+  <div style={{ margin: '12px 22px 0', position: 'relative', borderRadius: 16, overflow: 'hidden', height: 140, flexShrink: 0 }}>
+  {[
+    {
+      baslik: 'Maç bul, sahaya gel!',
+      aciklama: 'Yakınındaki maçlara katıl',
+      renk: 'linear-gradient(135deg, #1D9E75, #0a7055)',
+      ikon: '⚽'
+    },
+    {
+      baslik: 'Arkadaş edin',
+      aciklama: 'Maçlarda tanıştığın oyuncularla bağlantı kur',
+      renk: 'linear-gradient(135deg, #185FA5, #0d3d6b)',
+      ikon: '🤝'
+    },
+    {
+      baslik: 'İlan aç, oyuncu bul',
+      aciklama: 'Grubundaki eksikleri tamamla',
+      renk: 'linear-gradient(135deg, #e67e22, #d35400)',
+      ikon: '📢'
+    },
+  ].map((slide, i) => (
+    <div key={i} style={{
+      position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+      background: slide.renk,
+      display: 'flex', alignItems: 'center', padding: '20px 24px',
+      gap: 16,
+      opacity: aktifSlide === i ? 1 : 0,
+      transition: 'opacity 0.5s ease',
+      pointerEvents: aktifSlide === i ? 'auto' : 'none',
+    }}>
+      <div style={{ fontSize: 48 }}>{slide.ikon}</div>
+      <div>
+        <p style={{ fontSize: 18, fontWeight: 700, color: '#fff', margin: '0 0 6px', letterSpacing: -0.3 }}>{slide.baslik}</p>
+        <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.8)', margin: 0 }}>{slide.aciklama}</p>
+      </div>
+    </div>
+  ))}
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', padding: '16px 22px 10px', flexShrink: 0 }}>
+  {/* Nokta göstergesi */}
+  <div style={{ position: 'absolute', bottom: 10, left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: 6 }}>
+    {[0, 1, 2].map(i => (
+      <div key={i} onClick={() => setAktifSlide(i)} style={{
+        width: aktifSlide === i ? 20 : 6,
+        height: 6, borderRadius: 3,
+        background: aktifSlide === i ? '#fff' : 'rgba(255,255,255,0.4)',
+        cursor: 'pointer',
+        transition: 'all 0.3s ease',
+      }} />
+    ))}
+  </div>
+</div>
+
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', padding: '16px 22px 8px'}}>
         <p style={{ fontSize: 15, fontWeight: 500, margin: 0 }}>
           {aramaMetni ? `"${aramaMetni}" sonuçları` : 'Yakındaki maçlar'}
         </p>
         <span onClick={() => setAktifEkran('harita')} style={{ fontSize: 12, color: '#1D9E75', fontWeight: 500, cursor: 'pointer' }}>Haritada gör</span>
       </div>
-
-      <div style={{ padding: '0 22px', display: 'flex', flexDirection: 'column', gap: 12, overflowY: 'auto', paddingBottom: 16 }}>
+        <div style={{ padding: '0 22px', display: 'flex', flexDirection: 'column', gap: 12, paddingBottom: 16 }}>
         {yukleniyor ? (
           <p style={{ color: '#aaa', fontSize: 14, textAlign: 'center', padding: '40px 0' }}>Maçlar yükleniyor...</p>
         ) : filtreliMaclar.length === 0 ? (
@@ -547,6 +618,7 @@ const aktifFiltreVar = ilceFiltre !== 'Tümü' || saatFiltre !== 'Tümü' || ilF
           <MacKart key={mac.id} mac={mac} onClick={() => macaGit(mac)} />
         ))}
       </div>
+    </div>
     </div>
   )
 }
@@ -884,8 +956,7 @@ const mesajGonder = async () => {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
-
+<div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
       {/* Yeşil header */}
       <div style={{ background: '#1D9E75', padding: '16px 22px 20px', flexShrink: 0 }}>
         <span onClick={geriDon} style={{ color: '#fff', fontSize: 26, cursor: 'pointer', opacity: 0.8, display: 'inline-block', marginBottom: 8 }}>‹</span>
@@ -1163,6 +1234,46 @@ function IlanSayfa({ kullanici, bitti, geriDon }) {
   const [konum, setKonum] = useState(null)
   const [haritaAcik, setHaritaAcik] = useState(false)
   const [il, setIl] = useState('')
+  const [kullaniciKonum, setKullaniciKonum] = useState([41.0082, 28.9784])
+  const [aramaKonum, setAramaKonum] = useState('')
+  const haritaRef = useRef(null)
+  const [aramaKonumSonuclari, setAramaKonumSonuclari] = useState([])
+  const [aramaYukleniyor, setAramaYukleniyor] = useState(false)
+
+
+  useEffect(() => {
+  const timer = setTimeout(() => {
+    if (aramaKonum.length >= 3) konumAra(aramaKonum)
+    else setAramaKonumSonuclari([])
+  }, 500)
+  return () => clearTimeout(timer)
+}, [aramaKonum])
+
+  useEffect(() => {
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(
+      pos => setKullaniciKonum([pos.coords.latitude, pos.coords.longitude]),
+      () => {},
+      { timeout: 5000 }
+    )
+  }
+}, [])
+
+const konumAra = async (sorgu) => {
+  if (!sorgu.trim() || sorgu.length < 3) { setAramaKonumSonuclari([]); return }
+  setAramaYukleniyor(true)
+  try {
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(sorgu)}&format=json&limit=5&addressdetails=1&countrycodes=tr&accept-language=tr`,
+      { headers: { 'Accept-Language': 'tr', 'User-Agent': 'SahayaGel/1.0' } }
+    )
+    const data = await res.json()
+    setAramaKonumSonuclari(data || [])
+  } catch (e) {
+    console.log('Arama hatası:', e)
+  }
+  setAramaYukleniyor(false)
+}
   
 
  const yayinla = async () => {
@@ -1322,13 +1433,61 @@ if (!sahaAdi || !il || !ilce || !saat) { setHata('Lütfen tüm zorunlu alanları
       <div style={{ marginBottom: 20 }}>
         <p style={{ fontSize: 11, color: '#aaa', margin: '0 0 8px', fontWeight: 500, textTransform: 'uppercase', letterSpacing: 0.5 }}>Konum (isteğe bağlı)</p>
         {haritaAcik ? (
-          <div style={{ height: 200, borderRadius: 16, overflow: 'hidden', border: '0.5px solid #ebebE8' }}>
-            <MapContainer center={konum ? [konum.lat, konum.lng] : [41.0082, 28.9784]} zoom={13} style={{ width: '100%', height: '100%' }}>
-              <TileLayer attribution='&copy; CARTO' url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png" />
-              <KonumSecici onKonumSec={(k) => setKonum(k)} />
-              {konum && <Marker position={[konum.lat, konum.lng]} icon={sahaIkonu} />}
-            </MapContainer>
-          </div>
+          <div style={{ borderRadius: 16, overflow: 'hidden', border: '0.5px solid #ebebE8' }}>
+  <div style={{ padding: '10px', background: '#fff', borderBottom: '0.5px solid #ebebE8', position: 'relative' }}>
+  <div style={{ display: 'flex', gap: 8 }}>
+    <input
+      placeholder="Saha veya konum ara..."
+      value={aramaKonum}
+     onChange={e => setAramaKonum(e.target.value)}
+      style={{ flex: 1, border: 'none', outline: 'none', fontSize: 13, color: '#1a1a1a', background: '#f5f5f3', borderRadius: 10, padding: '8px 12px' }}
+    />
+    {aramaYukleniyor && <span style={{ fontSize: 12, color: '#aaa', alignSelf: 'center' }}>...</span>}
+  </div>
+
+  {aramaKonumSonuclari.length > 0 && (
+    <div style={{ position: 'absolute', left: 10, right: 10, top: 52, background: '#fff', borderRadius: 12, boxShadow: '0 4px 20px rgba(0,0,0,0.15)', zIndex: 1000, overflow: 'hidden', border: '0.5px solid #ebebE8' }}>
+      {aramaKonumSonuclari.map((s, i) => (
+        <div key={i} onClick={() => {
+          const lat = parseFloat(s.lat)
+          const lng = parseFloat(s.lon)
+          setKonum({ lat, lng })
+          setAramaKonum(s.display_name.split(',').slice(0, 2).join(','))
+          setAramaKonumSonuclari([])
+        }} style={{
+          padding: '10px 14px', fontSize: 13, color: '#1a1a1a', cursor: 'pointer',
+          borderBottom: i < aramaKonumSonuclari.length - 1 ? '0.5px solid #f0f0ee' : 'none',
+          lineHeight: 1.4,
+        }}
+          onMouseEnter={e => e.currentTarget.style.background = '#f5f5f3'}
+          onMouseLeave={e => e.currentTarget.style.background = '#fff'}
+        >
+          <p style={{ margin: '0 0 2px', fontWeight: 500 }}>
+  {s.name || s.display_name.split(',')[0]}
+</p>
+<p style={{ margin: 0, fontSize: 11, color: '#aaa' }}>
+  {[s.address?.neighbourhood, s.address?.suburb, s.address?.district, s.address?.city].filter(Boolean).join(', ')}
+</p>
+      </div>
+      ))}
+    </div>
+  )}
+</div>
+  <div style={{ height: 200 }}>
+    <MapContainer center={konum ? [konum.lat, konum.lng] : kullaniciKonum} zoom={15} style={{ width: '100%', height: '100%' }}>
+      <TileLayer attribution='&copy; CARTO' url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png" />
+      <KonumSecici onKonumSec={(k) => setKonum(k)} />
+      {konum && <Marker position={[konum.lat, konum.lng]} icon={sahaIkonu} />}
+      <Marker position={kullaniciKonum} icon={new L.DivIcon({
+        className: '',
+        html: `<div style="width:18px;height:18px;background:#1D9E75;border:3px solid #fff;border-radius:50%;box-shadow:0 2px 8px rgba(29,158,117,0.5);position:relative;"><div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:6px;height:6px;background:#fff;border-radius:50%;"></div></div>`,
+        iconSize: [18, 18],
+        iconAnchor: [9, 9],
+      })} />
+      <HaritaMerkezi konum={konum} aramaKonum={aramaKonum} />
+    </MapContainer>
+  </div>
+</div>
         ) : (
           <button onClick={() => setHaritaAcik(true)} style={{
             width: '100%', padding: '14px 16px', background: '#fff', border: '0.5px solid #ebebE8', borderRadius: 16, fontSize: 14, color: konum ? '#1D9E75' : '#aaa', cursor: 'pointer', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 10, boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
@@ -1810,12 +1969,22 @@ function KonumSecici({ onKonumSec }) {
   return null
 }
 
-function HaritaSayfa({ maclar, geriDon }) {
+function HaritaMerkezi({ konum }) {
+  const map = useMapEvents({})
+  useEffect(() => {
+    if (konum) {
+      map.setView([konum.lat, konum.lng], 16)
+    }
+  }, [konum, map])
+  return null
+}
+
+function HaritaSayfa({ maclar, geriDon, macaGit }) {
   const [aktifTip, setAktifTip] = useState('hepsi')
   const istanbul = [41.0082, 28.9784]
   const [merkez, setMerkez] = useState(istanbul)
-const [konumYukleniyor, setKonumYukleniyor] = useState(true)
-const haritaRef = useRef(null)
+  const [konumYukleniyor, setKonumYukleniyor] = useState(true)
+  const haritaRef = useRef(null)
 
 useEffect(() => {
   if (navigator.geolocation) {
@@ -1911,15 +2080,18 @@ useEffect(() => {
               iconAnchor: [21, 50],
               popupAnchor: [0, -52],
             })}>
-              <Popup>
-                <div style={{ minWidth: 160 }}>
-                  <p style={{ fontWeight: 600, margin: '0 0 4px', fontSize: 13 }}>{mac.saha_adi}</p>
-                  <p style={{ color: '#888', margin: '0 0 4px', fontSize: 12 }}>{mac.ilce} · {mac.format}</p>
-                  <p style={{ color: '#1D9E75', margin: 0, fontSize: 12, fontWeight: 600 }}>
-                    {mac.toplam_kisi - (mac.katilimlar?.filter(k => k.durum === 'onaylandi').length || 0)} yer açık
-                  </p>
-                </div>
-              </Popup>
+             <Popup>
+              <div style={{ minWidth: 160 }}>
+                <p style={{ fontWeight: 600, margin: '0 0 4px', fontSize: 13 }}>{mac.saha_adi}</p>
+                <p style={{ color: '#888', margin: '0 0 4px', fontSize: 12 }}>{mac.ilce} · {mac.format}</p>
+                <p style={{ color: '#1D9E75', margin: '0 0 8px', fontSize: 12, fontWeight: 600 }}>
+                  {mac.toplam_kisi - (mac.katilimlar?.filter(k => k.durum === 'onaylandi').length || 0)} yer açık
+                </p>
+                <button onClick={() => macaGit(mac)} style={{ width: '100%', padding: '6px', background: '#1D9E75', color: '#fff', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+                  Detaya git →
+                </button>
+              </div>
+            </Popup>
             </Marker>
           )
         ))}
@@ -2401,8 +2573,8 @@ const gonder = async () => {
   )
 }
 
-function AltNav({ aktifEkran, setAktifEkran, okunmamisSayisi }) {
-    const items = [
+function AltNav({ aktifEkran, setAktifEkran, okunmamisSayisi, kullanici }) {
+  const items = [
     { id: 'anasayfa', label: 'Keşfet', path: <path d="M3 10L11 3l8 7v9a1 1 0 01-1 1H5a1 1 0 01-1-1v-9z" stroke="currentColor" strokeWidth="1.5" /> },
     { id: 'ilan', label: 'İlan aç', path: <><circle cx="11" cy="11" r="8" stroke="currentColor" strokeWidth="1.5" /><path d="M11 8v6M8 11h6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></> },
     { id: 'bildirim', label: 'Bildirim', badge: okunmamisSayisi, path: <><path d="M11 2a7 7 0 017 7v3l1.5 3H2.5L4 12V9a7 7 0 017-7z" stroke="currentColor" strokeWidth="1.5" /><path d="M9 18a2 2 0 004 0" stroke="currentColor" strokeWidth="1.5" /></> },
@@ -2410,37 +2582,45 @@ function AltNav({ aktifEkran, setAktifEkran, okunmamisSayisi }) {
     { id: 'profil', label: 'Profil', path: <><circle cx="11" cy="8" r="3.5" stroke="currentColor" strokeWidth="1.5" /><path d="M4 19c0-3.866 3.134-6 7-6s7 2.134 7 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></> },
   ]
   return (
-  <div style={{ background: '#fff', borderTop: '0.5px solid #ebebE8', display: 'flex', flexShrink: 0, paddingBottom: 4 }}>
-    {items.map(item => (
-      <button key={item.id} onClick={() => setAktifEkran(item.id)} style={{
-        flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
-        padding: '10px 0 14px', border: 'none', background: 'none', cursor: 'pointer', position: 'relative'
-      }}>
-        <div style={{ position: 'relative' }}>
-          <div style={{
-            width: 44, height: 28, borderRadius: 14, display: 'flex', alignItems: 'center', justifyContent: 'center',
-            background: aktifEkran === item.id ? '#e8f7f1' : 'transparent',
-            transition: 'background 0.2s',
+    <div style={{ background: '#fff', borderTop: '0.5px solid #ebebE8', display: 'flex', flexShrink: 0, paddingBottom: 4 }}>
+      {items.map(item => {
+        return (
+          <button key={item.id} onClick={() => {
+            if (!kullanici && item.id !== 'anasayfa') {
+              setAktifEkran('giris')
+              return
+            }
+            setAktifEkran(item.id)
+          }} style={{
+            flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
+            padding: '10px 0 14px', border: 'none', background: 'none', cursor: 'pointer', position: 'relative'
           }}>
-            <svg width="20" height="20" viewBox="0 0 22 22" fill="none" style={{ color: aktifEkran === item.id ? '#1D9E75' : '#bbb' }}>
-              {item.path}
-            </svg>
-          </div>
-          {item.badge > 0 && (
-            <div style={{ position: 'absolute', top: -3, right: -3, width: 15, height: 15, borderRadius: '50%', background: '#e74c3c', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1.5px solid #fff' }}>
-              <span style={{ fontSize: 8, color: '#fff', fontWeight: 600 }}>{item.badge > 9 ? '9+' : item.badge}</span>
+            <div style={{ position: 'relative' }}>
+              <div style={{
+                width: 44, height: 28, borderRadius: 14, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: aktifEkran === item.id ? '#e8f7f1' : 'transparent',
+                transition: 'background 0.2s',
+              }}>
+                <svg width="20" height="20" viewBox="0 0 22 22" fill="none" style={{ color: aktifEkran === item.id ? '#1D9E75' : '#bbb' }}>
+                  {item.path}
+                </svg>
+              </div>
+              {item.badge > 0 && (
+                <div style={{ position: 'absolute', top: -3, right: -3, width: 15, height: 15, borderRadius: '50%', background: '#e74c3c', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1.5px solid #fff' }}>
+                  <span style={{ fontSize: 8, color: '#fff', fontWeight: 600 }}>{item.badge > 9 ? '9+' : item.badge}</span>
+                </div>
+              )}
             </div>
-          )}
-        </div>
-        <span style={{
-          fontSize: 10, letterSpacing: -0.2,
-          color: aktifEkran === item.id ? '#1D9E75' : '#bbb',
-          fontWeight: aktifEkran === item.id ? 600 : 400,
-        }}>{item.label}</span>
-      </button>
-    ))}
-  </div>
-)
+            <span style={{
+              fontSize: 10, letterSpacing: -0.2,
+              color: aktifEkran === item.id ? '#1D9E75' : '#bbb',
+              fontWeight: aktifEkran === item.id ? 600 : 400,
+            }}>{item.label}</span>
+          </button>
+        )
+      })}
+    </div>
+  )
 }
 
 const st = {
