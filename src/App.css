@@ -12,3 +12,8 @@ html, body {
   overflow: hidden;
   background-color: #f8f8f6;
 }
+
+* {
+  -webkit-user-select: none;
+  user-select: none;
+}

@@ -1336,8 +1336,8 @@ const mesajGonder = async () => {
   </div>
 )}
 {iptalModalAcik && (
-  <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', zIndex: 400, display: 'flex', alignItems: 'flex-end' }}>
-    <div style={{ background: '#fff', borderRadius: '20px 20px 0 0', padding: '24px 22px', width: '100%', boxSizing: 'border-box' }}>
+  <div onClick={() => setIptalModalAcik(false)} style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'flex-end', paddingBottom: 'env(safe-area-inset-bottom)' }}>
+    <div onClick={e => e.stopPropagation()} style={{ background: '#fff', borderRadius: '20px 20px 0 0', padding: '24px 22px 40px', width: '100%', boxSizing: 'border-box' }}>
       <p style={{ fontSize: 16, fontWeight: 700, margin: '0 0 8px' }}>İlanı iptal et</p>
       <p style={{ fontSize: 13, color: '#aaa', margin: '0 0 20px' }}>Tüm katılımcılara bildirim gidecek.</p>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
