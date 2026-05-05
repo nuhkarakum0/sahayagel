@@ -867,6 +867,7 @@ function DetaySayfa({ mac, kullanici, geriDon, onKullaniciTikla }) {
   const [aktifTab, setAktifTab] = useState(mac.baslangicTab || 'detay')
   const mesajSonuRef = useRef(null)
   const mesajInputRef = useRef(null)
+  const [iptalModalAcik, setIptalModalAcik] = useState(false)
 
   const benOrganizatorum = kullanici.id === mac.organizator_id
   const katilimSayisi = katilimlar.filter(k => k.durum === 'onaylandi').length
@@ -1111,25 +1112,7 @@ const mesajGonder = async () => {
 </button>
         
         {benOrganizatorum && (
-  <button onClick={async () => {
-    if (!window.confirm('İlanı iptal etmek istediğine emin misin? Tüm katılımcılara bildirim gidecek.')) return
-    const { data: katilimcilar } = await supabase
-      .from('katilimlar')
-      .select('kullanici_id')
-      .eq('mac_id', mac.id)
-      .eq('durum', 'onaylandi')
-    for (const k of katilimcilar || []) {
-      await bildirimGonder(
-        k.kullanici_id,
-        '❌ Maç iptal edildi',
-        `"${mac.saha_adi}" maçı organizatör tarafından iptal edildi.`,
-        'red',
-        mac.id
-      )
-    }
-    await supabase.from('maclar').delete().eq('id', mac.id)
-    geriDon()
-  }} style={{ float: 'right', background: 'transparent', border: '1px solid rgba(255,255,255,0.3)', borderRadius: 20, padding: '5px 12px', color: 'rgba(255,255,255,0.8)', fontSize: 12, fontWeight: 500, cursor: 'pointer' }}>
+  <button onClick={() => setIptalModalAcik(true)} style={{ float: 'right', background: 'transparent', border: '1px solid rgba(255,255,255,0.3)', borderRadius: 20, padding: '5px 12px', color: 'rgba(255,255,255,0.8)', fontSize: 12, fontWeight: 500, cursor: 'pointer' }}>
     İptal et
   </button>
 )}
@@ -1352,7 +1335,30 @@ const mesajGonder = async () => {
     </div>
   </div>
 )}
-
+{iptalModalAcik && (
+  <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', zIndex: 400, display: 'flex', alignItems: 'flex-end' }}>
+    <div style={{ background: '#fff', borderRadius: '20px 20px 0 0', padding: '24px 22px', width: '100%', boxSizing: 'border-box' }}>
+      <p style={{ fontSize: 16, fontWeight: 700, margin: '0 0 8px' }}>İlanı iptal et</p>
+      <p style={{ fontSize: 13, color: '#aaa', margin: '0 0 20px' }}>Tüm katılımcılara bildirim gidecek.</p>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+        <button onClick={() => setIptalModalAcik(false)} style={{ padding: '12px', borderRadius: 12, border: 'none', background: '#f5f5f3', color: '#888', fontSize: 14, fontWeight: 500, cursor: 'pointer' }}>
+          Vazgeç
+        </button>
+        <button onClick={async () => {
+          setIptalModalAcik(false)
+          const { data: katilimcilar } = await supabase.from('katilimlar').select('kullanici_id').eq('mac_id', mac.id).eq('durum', 'onaylandi')
+          for (const k of katilimcilar || []) {
+            await bildirimGonder(k.kullanici_id, '❌ Maç iptal edildi', `"${mac.saha_adi}" maçı iptal edildi.`, 'red', mac.id)
+          }
+          await supabase.from('maclar').delete().eq('id', mac.id)
+          geriDon()
+        }} style={{ padding: '12px', borderRadius: 12, border: 'none', background: '#fdecea', color: '#c0392b', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
+          İptal et
+        </button>
+      </div>
+    </div>
+  </div>
+)}
     </div>
   )
 }
