@@ -866,6 +866,7 @@ function DetaySayfa({ mac, kullanici, geriDon, onKullaniciTikla }) {
   const [gonderiyor, setGonderiyor] = useState(false)
   const [aktifTab, setAktifTab] = useState(mac.baslangicTab || 'detay')
   const mesajSonuRef = useRef(null)
+  const mesajInputRef = useRef(null)
 
   const benOrganizatorum = kullanici.id === mac.organizator_id
   const katilimSayisi = katilimlar.filter(k => k.durum === 'onaylandi').length
@@ -1032,6 +1033,7 @@ const mesajGonder = async () => {
   setGonderiyor(true)
   const icerik = yeniMesaj.trim()
   setYeniMesaj('')
+  setTimeout(() => mesajInputRef.current?.focus(), 50)
 
   const { data: benimProfilim } = await supabase
     .from('kullanicilar')
@@ -1100,6 +1102,14 @@ const mesajGonder = async () => {
       {/* Yeşil header */}
       <div style={{ background: '#1D9E75', padding: '16px 22px 20px', flexShrink: 0 }}>
         <span onClick={geriDon} style={{ color: '#fff', fontSize: 26, cursor: 'pointer', opacity: 0.8, display: 'inline-block', marginBottom: 8 }}>‹</span>
+        <button onClick={() => {
+  const url = `https://sahayagel.vercel.app`
+  const mesaj = `${mac.saha_adi} maçına katıl! ${mac.ilce} - ${new Date(mac.saat).toLocaleString('tr-TR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}`
+  window.open(`https://wa.me/?text=${encodeURIComponent(mesaj + ' ' + url)}`, '_blank')
+}} style={{ float: 'right', background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: 10, padding: '6px 14px', color: '#fff', fontSize: 13, fontWeight: 500, cursor: 'pointer', marginRight: 8 }}>
+  Paylaş
+</button>
+        
         {benOrganizatorum && (
   <button onClick={async () => {
     if (!window.confirm('İlanı silmek istediğine emin misin?')) return
@@ -1301,6 +1311,7 @@ const mesajGonder = async () => {
     {/* Mesaj yazma alanı */}
     <div style={{ padding: '10px 16px 16px', background: '#fff', borderTop: '0.5px solid #ebebE8', display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
       <input
+        ref={mesajInputRef}
         value={yeniMesaj}
         onChange={e => setYeniMesaj(e.target.value)}
         onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); mesajGonder() } }}
