@@ -39,6 +39,7 @@ export default function App() {
   const [seciliOzelMesaj, setSeciliOzelMesaj] = useState(null)
   const [degerlendirmeMac, setDegerlendirmeMac] = useState(null)
   const [degerlendirmeKatilimcilar, setDegerlendirmeKatilimcilar] = useState([])
+  const [online, setOnline] = useState(navigator.onLine)
 
 useEffect(() => {
   CapStatusBar.setOverlaysWebView({ overlay: false })
@@ -85,6 +86,17 @@ useEffect(() => {
     setBildirimler(data || [])
     setOkunmamisSayisi((data || []).filter(b => !b.okundu).length)
   }
+  
+  useEffect(() => {
+  const ac = () => setOnline(true)
+  const kapat = () => setOnline(false)
+  window.addEventListener('online', ac)
+  window.addEventListener('offline', kapat)
+  return () => {
+    window.removeEventListener('online', ac)
+    window.removeEventListener('offline', kapat)
+  }
+}, [])
 
   bildirimleriGetir()
 
@@ -132,6 +144,12 @@ adminKontrol()
 
   return (
     <div style={st.kapsayici}>
+      {!online && (
+  <div style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 9999, background: '#e74c3c', padding: '10px 22px', display: 'flex', alignItems: 'center', gap: 8 }}>
+    <span style={{ fontSize: 14 }}>📵</span>
+    <span style={{ fontSize: 13, color: '#fff', fontWeight: 500 }}>İnternet bağlantısı yok</span>
+  </div>
+)}
       <div style={st.telefon}>
         <StatusBar />
         {aktifEkran === 'giris' ? (
@@ -2062,7 +2080,7 @@ if (seciliMac) return (
               <span style={{ fontSize: 12, fontWeight: 600, color: '#fff' }}>Güvenilir Organizatör</span>
             </div>
           )}
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center' }}>
             {[profil?.pozisyon || 'Belirtilmedi', (profil?.seviye || 'Orta') + ' seviye', maclarim.length + ' maç'].map((chip, i) => (
               <span key={i} style={{ background: 'rgba(255,255,255,0.2)', color: '#fff', fontSize: 12, padding: '4px 12px', borderRadius: 20 }}>{chip}</span>
             ))}
