@@ -229,7 +229,7 @@ macaGit={(mac) => {
               )}
 
 {hedefKullanici && (
-                <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: '#f8f8f6', zIndex: 300, display: 'flex', flexDirection: 'column' }}>
+                <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: '#f8f8f6', zIndex: 1000, display: 'flex', flexDirection: 'column' }}>
                 <KullaniciProfil
                     kullanici={kullanici}
                     hedefId={hedefKullanici}
@@ -1129,7 +1129,7 @@ const mesajGonder = async () => {
     }
     await supabase.from('maclar').delete().eq('id', mac.id)
     geriDon()
-  }} style={{ float: 'right', background: 'transparent', border: '1px solid rgba(255,255,255,0.3)', borderRadius: 20, padding: '5px 12px', color: 'rgba(255,255,255,0.8)', fontSize: 12, fontWeight: 500, cursor: 'pointer' }}>
+  }} style={{ float: 'right', background: 'transparent', border: '1px solid rgba(255,255,255,0.3)', borderRadius: 20, padding: '5px 12px', color: '#ff6b6b', border: '1px solid rgba(255,107,107,0.4)', fontSize: 12, fontWeight: 500, cursor: 'pointer' }}>
     İptal et
   </button>
 )}
@@ -1182,10 +1182,10 @@ const mesajGonder = async () => {
             <div style={{ width: `${(katilimSayisi / mac.toplam_kisi) * 100}%`, height: '100%', borderRadius: 3, background: '#1D9E75', transition: 'width 0.3s' }} />
           </div>
 
-          <div style={{ display: 'flex', gap: 6, marginTop: 10 }}>
+          <div style={{ display: 'flex', gap: 6, marginTop: 8, marginBottom: 10 }}>
             {katilimlar.filter(k => k.durum === 'onaylandi').map((k, i) => (
-              <div key={i} onClick={() => onKullaniciTikla && onKullaniciTikla(k.kullanici_id)} style={{ cursor: 'pointer' }}>
-                {k.kullanicilar?.avatar_url ? (
+              <div key={i} onClick={(e) => { e.stopPropagation(); onKullaniciTikla && onKullaniciTikla(k.kullanici_id) }} style={{ cursor: 'pointer' }}>
+                  {k.kullanicilar?.avatar_url ? (
                   <img src={k.kullanicilar.avatar_url} style={{ width: 30, height: 30, borderRadius: '50%', objectFit: 'cover', border: '2px solid #fff' }} alt="" />
                 ) : (
                   <div style={{ width: 30, height: 30, borderRadius: '50%', background: '#e8f7f1', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: '#0F6E56', border: '2px solid #fff' }}>
@@ -1201,7 +1201,7 @@ const mesajGonder = async () => {
                     {mac.lat && mac.lng && (
           <div style={{ background: '#fff', borderRadius: 16, padding: '14px 16px', marginBottom: 14, border: '0.5px solid #ebebE8' }}>
             <p style={{ fontSize: 12, color: '#aaa', margin: '0 0 8px' }}>Konum</p>
-            <div style={{ height: 200, borderRadius: 10, overflow: 'hidden', cursor: 'pointer' }} onClick={() => window.open(`https://www.google.com/maps?q=${mac.lat},${mac.lng}`, '_blank')}>
+<div style={{ height: 200, borderRadius: 10, overflow: 'hidden' }}>
               <MapContainer center={[mac.lat, mac.lng]} zoom={15} style={{ width: '100%', height: '100%' }} zoomControl={false} dragging={false} scrollWheelZoom={false} doubleClickZoom={false} touchZoom={false}>
                 <TileLayer url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png" />
                 <Marker position={[mac.lat, mac.lng]} icon={new L.DivIcon({
