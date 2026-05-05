@@ -1106,26 +1106,31 @@ const mesajGonder = async () => {
   const url = `https://sahayagel.vercel.app`
   const mesaj = `${mac.saha_adi} maçına katıl! ${mac.ilce} - ${new Date(mac.saat).toLocaleString('tr-TR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}`
   window.open(`https://wa.me/?text=${encodeURIComponent(mesaj + ' ' + url)}`, '_blank')
-}} style={{ float: 'right', background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: 10, padding: '6px 14px', color: '#fff', fontSize: 13, fontWeight: 500, cursor: 'pointer', marginRight: 8 }}>
+}} style={{ float: 'right', background: 'transparent', border: '1px solid rgba(255,255,255,0.3)', borderRadius: 20, padding: '5px 12px', color: '#fff', fontSize: 12, fontWeight: 500, cursor: 'pointer', marginLeft: 8 }}>
   Paylaş
 </button>
         
         {benOrganizatorum && (
   <button onClick={async () => {
-    if (!window.confirm('İlanı silmek istediğine emin misin?')) return
+    if (!window.confirm('İlanı iptal etmek istediğine emin misin? Tüm katılımcılara bildirim gidecek.')) return
+    const { data: katilimcilar } = await supabase
+      .from('katilimlar')
+      .select('kullanici_id')
+      .eq('mac_id', mac.id)
+      .eq('durum', 'onaylandi')
+    for (const k of katilimcilar || []) {
+      await bildirimGonder(
+        k.kullanici_id,
+        '❌ Maç iptal edildi',
+        `"${mac.saha_adi}" maçı organizatör tarafından iptal edildi.`,
+        'red',
+        mac.id
+      )
+    }
     await supabase.from('maclar').delete().eq('id', mac.id)
     geriDon()
-  }} style={{ float: 'right', background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: 10, padding: '6px 14px', color: '#fff', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>
-    Sil
-  </button>
-)}
-        {benOrganizatorum && (
-  <button onClick={async () => {
-    if (!window.confirm('İlanı silmek istediğine emin misin?')) return
-    await supabase.from('maclar').delete().eq('id', mac.id)
-    geriDon()
-  }} style={{ float: 'right', background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: 10, padding: '6px 14px', color: '#fff', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>
-    Sil
+  }} style={{ float: 'right', background: 'transparent', border: '1px solid rgba(255,255,255,0.3)', borderRadius: 20, padding: '5px 12px', color: 'rgba(255,255,255,0.8)', fontSize: 12, fontWeight: 500, cursor: 'pointer' }}>
+    İptal et
   </button>
 )}
         <p style={{ fontSize: 20, fontWeight: 500, color: '#fff', margin: '0 0 4px', letterSpacing: -0.3 }}>{mac.saha_adi}</p>
@@ -1176,10 +1181,27 @@ const mesajGonder = async () => {
           <div style={{ height: 6, background: '#eee', borderRadius: 3, marginBottom: 20 }}>
             <div style={{ width: `${(katilimSayisi / mac.toplam_kisi) * 100}%`, height: '100%', borderRadius: 3, background: '#1D9E75', transition: 'width 0.3s' }} />
           </div>
+
+          <div style={{ display: 'flex', gap: 6, marginTop: 10 }}>
+            {katilimlar.filter(k => k.durum === 'onaylandi').map((k, i) => (
+              <div key={i} onClick={() => onKullaniciTikla && onKullaniciTikla(k.kullanici_id)} style={{ cursor: 'pointer' }}>
+                {k.kullanicilar?.avatar_url ? (
+                  <img src={k.kullanicilar.avatar_url} style={{ width: 30, height: 30, borderRadius: '50%', objectFit: 'cover', border: '2px solid #fff' }} alt="" />
+                ) : (
+                  <div style={{ width: 30, height: 30, borderRadius: '50%', background: '#e8f7f1', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: '#0F6E56', border: '2px solid #fff' }}>
+                    {k.kullanicilar?.isim?.slice(0, 1) || '?'}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+
+
+
                     {mac.lat && mac.lng && (
           <div style={{ background: '#fff', borderRadius: 16, padding: '14px 16px', marginBottom: 14, border: '0.5px solid #ebebE8' }}>
             <p style={{ fontSize: 12, color: '#aaa', margin: '0 0 8px' }}>Konum</p>
-            <div style={{ height: 140, borderRadius: 10, overflow: 'hidden', cursor: 'pointer' }} onClick={() => window.open(`https://www.google.com/maps?q=${mac.lat},${mac.lng}`, '_blank')}>
+            <div style={{ height: 200, borderRadius: 10, overflow: 'hidden', cursor: 'pointer' }} onClick={() => window.open(`https://www.google.com/maps?q=${mac.lat},${mac.lng}`, '_blank')}>
               <MapContainer center={[mac.lat, mac.lng]} zoom={15} style={{ width: '100%', height: '100%' }} zoomControl={false} dragging={false} scrollWheelZoom={false} doubleClickZoom={false} touchZoom={false}>
                 <TileLayer url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png" />
                 <Marker position={[mac.lat, mac.lng]} icon={new L.DivIcon({
