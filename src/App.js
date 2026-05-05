@@ -2019,15 +2019,18 @@ if (seciliMac) return (
       </div>
 
       <div style={{ flex: 1, overflowY: 'auto' }}>
-<div style={{ background: 'linear-gradient(to top, #0a7055 0%, #1D9E75 100%)', padding: '24px 22px 32px' }}>
+<div style={{ background: 'linear-gradient(135deg, #0a7055 0%, #1D9E75 60%, #25c48a 100%)', padding: '32px 22px 40px', position: 'relative', overflow: 'hidden' }}>
+  <div style={{ position: 'absolute', top: -40, right: -40, width: 180, height: 180, borderRadius: '50%', background: 'rgba(255,255,255,0.06)' }} />
+  <div style={{ position: 'absolute', bottom: -20, left: -20, width: 120, height: 120, borderRadius: '50%', background: 'rgba(255,255,255,0.04)' }} />
 
 
           {/* Avatar */}
-          <div style={{ position: 'relative', width: 72, height: 72, marginBottom: 14 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: 16, position: 'relative', zIndex: 1, width: '100%', textAlign: 'center' }}>
+          <div style={{ position: 'relative', width: 88, height: 88, marginBottom: 14 }}>
             {avatarUrl ? (
-              <img src={avatarUrl} alt="profil" style={{ width: 72, height: 72, borderRadius: '50%', objectFit: 'cover', border: '3px solid rgba(255,255,255,0.3)' }} />
+              <img src={avatarUrl} alt="profil" style={{ width: 88, height: 88, borderRadius: '50%', objectFit: 'cover', border: '3px solid rgba(255,255,255,0.3)' }} />
             ) : (
-              <div style={{ width: 72, height: 72, borderRadius: '50%', background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 32 }}>⚽</div>
+              <div style={{ width: 88, height: 88, borderRadius: '50%', background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 32 }}>⚽</div>
             )}
             {duzenle && (
               <label style={{ position: 'absolute', bottom: 0, right: 0, width: 24, height: 24, background: '#fff', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 2px 6px rgba(0,0,0,0.2)' }}>
@@ -2059,13 +2062,14 @@ if (seciliMac) return (
               <span style={{ fontSize: 12, fontWeight: 600, color: '#fff' }}>Güvenilir Organizatör</span>
             </div>
           )}
-          <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.7)', margin: '0 0 14px' }}>{kullanici.email}</p>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             {[profil?.pozisyon || 'Belirtilmedi', (profil?.seviye || 'Orta') + ' seviye', maclarim.length + ' maç'].map((chip, i) => (
               <span key={i} style={{ background: 'rgba(255,255,255,0.2)', color: '#fff', fontSize: 12, padding: '4px 12px', borderRadius: 20 }}>{chip}</span>
             ))}
           </div>
         </div>
+        </div>
+
 
         <div style={{ padding: '20px 22px' }}>
 
