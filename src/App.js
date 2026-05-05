@@ -95,13 +95,13 @@ useEffect(() => {
     return () => subscription.unsubscribe()
   }, [])
 
-  useEffect(() => {
-  if (!kullanici) return
-
   const toastGoster = (mesaj, tip = 'hata') => {
   setToast({ mesaj, tip })
   setTimeout(() => setToast(null), 3000)
 }
+
+useEffect(() => {
+  if (!kullanici) return
 
   const bildirimleriGetir = async () => {
     const { data } = await supabase
@@ -159,17 +159,17 @@ adminKontrol()
 
   return (
     <div style={st.kapsayici}>
-      <div style={st.telefon}>,
+      <div style={st.telefon}>
       {!online && (
-  <div style={{ background: '#1a1a1a', padding: '8px 22px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, flexShrink: 0 }}>
-    <span style={{ fontSize: 12, color: '#fff', fontWeight: 500 }}>İnternet bağlantısı yok</span>
-  </div>
-)}
-{toast && (
-  <div style={{ position: 'fixed', bottom: 90, left: 16, right: 16, zIndex: 9999, background: toast.tip === 'hata' ? '#1a1a1a' : '#1D9E75', borderRadius: 14, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 10, boxShadow: '0 4px 20px rgba(0,0,0,0.2)' }}>
-    <span style={{ fontSize: 13, color: '#fff', fontWeight: 500 }}>{toast.mesaj}</span>
-  </div>
-)}
+            <div style={{ background: '#1a1a1a', padding: '8px 22px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, flexShrink: 0 }}>
+              <span style={{ fontSize: 12, color: '#fff', fontWeight: 500 }}>İnternet bağlantısı yok</span>
+            </div>
+          )}
+          {toast && (
+            <div style={{ position: 'fixed', bottom: 90, left: 16, right: 16, zIndex: 9999, background: toast.tip === 'hata' ? '#1a1a1a' : '#1D9E75', borderRadius: 14, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 10, boxShadow: '0 4px 20px rgba(0,0,0,0.2)' }}>
+              <span style={{ fontSize: 13, color: '#fff', fontWeight: 500 }}>{toast.mesaj}</span>
+            </div>
+          )}
         <StatusBar />
         {aktifEkran === 'giris' ? (
   <GirisSayfa setKullanici={setKullanici} geriDon={() => setAktifEkran('anasayfa')} />
@@ -178,7 +178,8 @@ adminKontrol()
           {aktifEkran === 'anasayfa' && (
            <AnaSayfa
   kullanici={kullanici}
-macaGit={(mac) => {
+  toastGoster={toastGoster}
+  macaGit={(mac) => {
   if (!kullanici) { setAktifEkran('giris'); return }
   setSeciliMac(mac); setAktifEkran('detay')
 }}
@@ -394,7 +395,7 @@ function GirisSayfa({ setKullanici, geriDon }) {
 )
 }
 
-function AnaSayfa({ kullanici, macaGit, onMaclarYuklendi, setAktifEkran }) {
+function AnaSayfa({ kullanici, macaGit, onMaclarYuklendi, setAktifEkran, toastGoster }) {
   const [maclar, setMaclar] = useState([])
   const [aktifSlide, setAktifSlide] = useState(0)
   const [yukleniyor, setYukleniyor] = useState(true)
@@ -425,21 +426,26 @@ function AnaSayfa({ kullanici, macaGit, onMaclarYuklendi, setAktifEkran }) {
   
 
   const filtreler = ['Tümü', 'Bu akşam']
- const maclariGetir = async () => {
+const maclariGetir = async () => {
   setYukleniyor(true)
-  const { data, error } = await supabase
-    .from('maclar')
-    .select(`*, kullanicilar!maclar_organizator_id_fkey(isim, avatar_url), katilimlar(id, durum, kullanici_id, kullanicilar(isim, avatar_url))`)
-    .gte('saat', new Date().toISOString())
-    .order('saat', { ascending: true })
-  if (error) {
-  toastGoster('Maçlar yüklenemedi, tekrar dene')
-  setYukleniyor(false)
-  return
-}
-  setMaclar(data || [])
-  onMaclarYuklendi(data || [])
-  setYukleniyor(false)
+  try {
+    const { data, error } = await supabase
+      .from('maclar')
+      .select(`*, kullanicilar!maclar_organizator_id_fkey(isim, avatar_url), katilimlar(id, durum, kullanici_id, kullanicilar(isim, avatar_url))`)
+      .gte('saat', new Date().toISOString())
+      .order('saat', { ascending: true })
+    if (error || !data) {
+      if (toastGoster) toastGoster('Maçlar yüklenemedi, tekrar dene')
+      setYukleniyor(false)
+      return
+    }
+    setMaclar(data || [])
+    onMaclarYuklendi(data || [])
+    setYukleniyor(false)
+  } catch (e) {
+    if (toastGoster) toastGoster('Maçlar yüklenemedi, tekrar dene')
+    setYukleniyor(false)
+  }
 }
 useEffect(() => {
   const timer = setInterval(() => {
