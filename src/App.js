@@ -45,7 +45,23 @@ useEffect(() => {
   CapStatusBar.setBackgroundColor({ color: '#f8f8f6' })
   const dark = window.matchMedia('(prefers-color-scheme: dark)').matches
   CapStatusBar.setStyle({ style: dark ? Style.Dark : Style.Light })
+  const safeTop = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--sat') || '44')
+document.documentElement.style.setProperty('--safe-top', safeTop + 'px')
 }, [])
+
+useEffect(() => {
+  const fix = () => {
+    document.documentElement.style.height = window.innerHeight + 'px'
+  }
+  fix()
+  window.addEventListener('resize', fix)
+  window.addEventListener('focus', fix)
+  return () => {
+    window.removeEventListener('resize', fix)
+    window.removeEventListener('focus', fix)
+  }
+}, [])
+
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setKullanici(session?.user ?? null)
@@ -212,7 +228,7 @@ macaGit={(mac) => {
                 </div>
               )}
 
-           {hedefKullanici && (
+{hedefKullanici && (
                 <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: '#f8f8f6', zIndex: 300, display: 'flex', flexDirection: 'column' }}>
                 <KullaniciProfil
                     kullanici={kullanici}
@@ -227,7 +243,9 @@ macaGit={(mac) => {
               </div>
             )}
 
-<AltNav aktifEkran={aktifEkran} setAktifEkran={setAktifEkran} okunmamisSayisi={okunmamisSayisi} kullanici={kullanici} isAdmin={isAdmin} />        </>
+<div style={{ position: 'relative', zIndex: 999, flexShrink: 0, background: '#fff' }}>
+  <AltNav aktifEkran={aktifEkran} setAktifEkran={setAktifEkran} okunmamisSayisi={okunmamisSayisi} kullanici={kullanici} isAdmin={isAdmin} />
+</div>        </>
         )}
       </div>
     </div>
@@ -3457,8 +3475,7 @@ function AltNav({ aktifEkran, setAktifEkran, okunmamisSayisi, kullanici, isAdmin
   ]
   
   return (
-<div style={{ background: '#fff', borderTop: '0.5px solid #ebebE8', display: 'flex', flexShrink: 0, padding: '10px 0',
-paddingBottom: 'max(6px, env(safe-area-inset-bottom))', }}>
+<div style={{ background: '#fff', borderTop: '0.5px solid #ebebE8', display: 'flex', flexShrink: 0, padding: '10px 0 0', paddingBottom: 'env(safe-area-inset-bottom, 20px)' }}>
         {items.map(item => {
         return (
           <button key={item.id} onClick={() => {
@@ -3501,8 +3518,8 @@ paddingBottom: 'max(6px, env(safe-area-inset-bottom))', }}>
 }
 
 const st = {
-  kapsayici: { height: '100dvh', display: 'flex', flexDirection: 'column', background: '#f8f8f6', overflow: 'hidden', paddingTop: 'env(safe-area-inset-top)' },
-  telefon: { width: '100%', maxWidth: '100vw', background: '#f8f8f6', borderRadius: 0, display: 'flex', flexDirection: 'column', height: '100dvh', boxShadow: 'none', overflow: 'hidden', position: 'relative' },
+  kapsayici: { height: '100%', display: 'flex', flexDirection: 'column', background: '#f8f8f6', overflow: 'hidden' },
+  telefon: { width: '100%', maxWidth: '100vw', background: '#f8f8f6', borderRadius: 0, display: 'flex', flexDirection: 'column', height: '100%', boxShadow: 'none', overflow: 'hidden', position: 'relative' },
   anaButon: { width: '100%', padding: 14, background: '#1D9E75', color: '#fff', border: 'none', borderRadius: 14, fontSize: 15, fontWeight: 500, cursor: 'pointer' },
   label: { fontSize: 12, color: '#888', margin: '0 0 6px' },
   input: { width: '100%', background: '#fff', border: '0.5px solid #e8e8e4', borderRadius: 12, padding: '11px 14px', fontSize: 14, color: '#1a1a1a', marginBottom: 16, outline: 'none' },
