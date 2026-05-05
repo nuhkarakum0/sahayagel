@@ -1129,7 +1129,7 @@ const mesajGonder = async () => {
     }
     await supabase.from('maclar').delete().eq('id', mac.id)
     geriDon()
-  }} style={{ float: 'right', background: 'transparent', border: '1px solid rgba(255,255,255,0.3)', borderRadius: 20, padding: '5px 12px', color: '#ff6b6b', border: '1px solid rgba(255,107,107,0.4)', fontSize: 12, fontWeight: 500, cursor: 'pointer' }}>
+  }} style={{ float: 'right', background: 'transparent', border: '1px solid rgba(255,255,255,0.3)', borderRadius: 20, padding: '5px 12px', color: 'rgba(255,255,255,0.8)', fontSize: 12, fontWeight: 500, cursor: 'pointer' }}>
     İptal et
   </button>
 )}
