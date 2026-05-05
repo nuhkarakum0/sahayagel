@@ -6,6 +6,8 @@ import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { getCities, getDistrictsByCityCode } from 'turkey-neighbourhoods'
 import { StatusBar as CapStatusBar, Style } from '@capacitor/status-bar'
+import { Network } from '@capacitor/network'
+
 // Leaflet ikon düzeltmesi
 delete L.Icon.Default.prototype._getIconUrl
 L.Icon.Default.mergeOptions({
@@ -39,7 +41,26 @@ export default function App() {
   const [seciliOzelMesaj, setSeciliOzelMesaj] = useState(null)
   const [degerlendirmeMac, setDegerlendirmeMac] = useState(null)
   const [degerlendirmeKatilimcilar, setDegerlendirmeKatilimcilar] = useState([])
-  const [online, setOnline] = useState(navigator.onLine)
+  const [online, setOnline] = useState(true)
+  const [toast, setToast] = useState(null)
+
+useEffect(() => {
+  let listener
+
+  const setup = async () => {
+    const status = await Network.getStatus()
+    setOnline(status.connected)
+    listener = await Network.addListener('networkStatusChange', status => {
+      setOnline(status.connected)
+    })
+  }
+
+  setup()
+
+  return () => {
+    if (listener) listener.remove()
+  }
+}, [])
 
 useEffect(() => {
   CapStatusBar.setOverlaysWebView({ overlay: false })
@@ -77,6 +98,11 @@ useEffect(() => {
   useEffect(() => {
   if (!kullanici) return
 
+  const toastGoster = (mesaj, tip = 'hata') => {
+  setToast({ mesaj, tip })
+  setTimeout(() => setToast(null), 3000)
+}
+
   const bildirimleriGetir = async () => {
     const { data } = await supabase
       .from('bildirimler')
@@ -86,17 +112,6 @@ useEffect(() => {
     setBildirimler(data || [])
     setOkunmamisSayisi((data || []).filter(b => !b.okundu).length)
   }
-  
-  useEffect(() => {
-  const ac = () => setOnline(true)
-  const kapat = () => setOnline(false)
-  window.addEventListener('online', ac)
-  window.addEventListener('offline', kapat)
-  return () => {
-    window.removeEventListener('online', ac)
-    window.removeEventListener('offline', kapat)
-  }
-}, [])
 
   bildirimleriGetir()
 
@@ -144,13 +159,17 @@ adminKontrol()
 
   return (
     <div style={st.kapsayici}>
+      <div style={st.telefon}>,
       {!online && (
-  <div style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 9999, background: '#e74c3c', padding: '10px 22px', display: 'flex', alignItems: 'center', gap: 8 }}>
-    <span style={{ fontSize: 14 }}>📵</span>
-    <span style={{ fontSize: 13, color: '#fff', fontWeight: 500 }}>İnternet bağlantısı yok</span>
+  <div style={{ background: '#1a1a1a', padding: '8px 22px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, flexShrink: 0 }}>
+    <span style={{ fontSize: 12, color: '#fff', fontWeight: 500 }}>İnternet bağlantısı yok</span>
   </div>
 )}
-      <div style={st.telefon}>
+{toast && (
+  <div style={{ position: 'fixed', bottom: 90, left: 16, right: 16, zIndex: 9999, background: toast.tip === 'hata' ? '#1a1a1a' : '#1D9E75', borderRadius: 14, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 10, boxShadow: '0 4px 20px rgba(0,0,0,0.2)' }}>
+    <span style={{ fontSize: 13, color: '#fff', fontWeight: 500 }}>{toast.mesaj}</span>
+  </div>
+)}
         <StatusBar />
         {aktifEkran === 'giris' ? (
   <GirisSayfa setKullanici={setKullanici} geriDon={() => setAktifEkran('anasayfa')} />
@@ -406,13 +425,18 @@ function AnaSayfa({ kullanici, macaGit, onMaclarYuklendi, setAktifEkran }) {
   
 
   const filtreler = ['Tümü', 'Bu akşam']
-  const maclariGetir = async () => {
+ const maclariGetir = async () => {
   setYukleniyor(true)
-  const { data } = await supabase
-  .from('maclar')
-.select(`*, kullanicilar!maclar_organizator_id_fkey(isim, avatar_url), katilimlar(id, durum, kullanici_id, kullanicilar(isim, avatar_url))`)
-  .gte('saat', new Date().toISOString())
-  .order('saat', { ascending: true })
+  const { data, error } = await supabase
+    .from('maclar')
+    .select(`*, kullanicilar!maclar_organizator_id_fkey(isim, avatar_url), katilimlar(id, durum, kullanici_id, kullanicilar(isim, avatar_url))`)
+    .gte('saat', new Date().toISOString())
+    .order('saat', { ascending: true })
+  if (error) {
+  toastGoster('Maçlar yüklenemedi, tekrar dene')
+  setYukleniyor(false)
+  return
+}
   setMaclar(data || [])
   onMaclarYuklendi(data || [])
   setYukleniyor(false)
