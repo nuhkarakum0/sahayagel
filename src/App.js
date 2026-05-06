@@ -7,6 +7,7 @@ import 'leaflet/dist/leaflet.css'
 import { getCities, getDistrictsByCityCode } from 'turkey-neighbourhoods'
 import { StatusBar as CapStatusBar, Style } from '@capacitor/status-bar'
 import { Network } from '@capacitor/network'
+import { Keyboard } from '@capacitor/keyboard'
 
 // Leaflet ikon düzeltmesi
 delete L.Icon.Default.prototype._getIconUrl
@@ -43,6 +44,8 @@ export default function App() {
   const [degerlendirmeKatilimcilar, setDegerlendirmeKatilimcilar] = useState([])
   const [online, setOnline] = useState(true)
   const [toast, setToast] = useState(null)
+  const [onboardingBitti, setOnboardingBitti] = useState(!!localStorage.getItem('onboarding_done'))
+  const [klavyeYuksekligi, setKlavyeYuksekligi] = useState(0)
 
 useEffect(() => {
   let listener
@@ -68,7 +71,26 @@ useEffect(() => {
   const dark = window.matchMedia('(prefers-color-scheme: dark)').matches
   CapStatusBar.setStyle({ style: dark ? Style.Dark : Style.Light })
   const safeTop = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--sat') || '44')
-document.documentElement.style.setProperty('--safe-top', safeTop + 'px')
+  document.documentElement.style.setProperty('--safe-top', safeTop + 'px')
+  Keyboard.setResizeMode({ mode: 'none' })
+}, [])
+
+useEffect(() => {
+  Keyboard.addListener('keyboardWillShow', info => {
+    setKlavyeYuksekligi(info.keyboardHeight)
+  })
+  Keyboard.addListener('keyboardWillHide', () => {
+    setKlavyeYuksekligi(0)
+  })
+  return () => {
+    Keyboard.removeAllListeners()
+  }
+}, [])
+
+useEffect(() => {
+  document.body.style.position = 'fixed'
+  document.body.style.width = '100%'
+  document.body.style.height = '100%'
 }, [])
 
 useEffect(() => {
@@ -147,6 +169,14 @@ adminKontrol()
   return () => supabase.removeChannel(kanal)
 }, [kullanici])
 
+if (!onboardingBitti) return (
+  <div style={st.kapsayici}>
+    <div style={st.telefon}>
+      <OnboardingSayfa onBitti={() => setOnboardingBitti(true)} />
+    </div>
+  </div>
+)
+
   if (yukleniyor) return (
     <div style={st.kapsayici}>
       <div style={st.telefon}>
@@ -191,12 +221,15 @@ adminKontrol()
   <AdminSayfa kullanici={kullanici} />
 )}
             {aktifEkran === 'detay' && seciliMac && (
-              <DetaySayfa
-                mac={seciliMac}
-                kullanici={kullanici}
-                geriDon={() => setAktifEkran('anasayfa')}
-                onKullaniciTikla={(id) => setHedefKullanici(id)}
-              />
+              <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: klavyeYuksekligi, zIndex: 100, display: 'flex', flexDirection: 'column', transition: 'bottom 0.25s ease' }}>
+                <DetaySayfa
+                  mac={seciliMac}
+                  kullanici={kullanici}
+                  geriDon={() => setAktifEkran('anasayfa')}
+                  onKullaniciTikla={(id) => setHedefKullanici(id)}
+                  klavyeYuksekligi={klavyeYuksekligi}
+                />
+              </div>
             )}
             {aktifEkran === 'ilan' && kullanici && (
               <IlanSayfa
@@ -205,19 +238,19 @@ adminKontrol()
                 geriDon={() => setAktifEkran('anasayfa')}
               />
             )}
-   {aktifEkran === 'bildirim' && kullanici && (
-  <BildirimSayfa
-    kullanici={kullanici}
-    onKullaniciTikla={(id) => setHedefKullanici(id)}
-    bildirimler={bildirimler}
-    setBildirimler={setBildirimler}
-    setOkunmamisSayisi={setOkunmamisSayisi}
-    onBildirimTikla={(mac, aktifTab) => {
-  setSeciliMac({ ...mac, baslangicTab: aktifTab })
-  setAktifEkran('detay')
-}}
-  />
-)}
+              {aktifEkran === 'bildirim' && kullanici && (
+              <BildirimSayfa
+                kullanici={kullanici}
+                onKullaniciTikla={(id) => setHedefKullanici(id)}
+                bildirimler={bildirimler}
+                setBildirimler={setBildirimler}
+                setOkunmamisSayisi={setOkunmamisSayisi}
+                onBildirimTikla={(mac, aktifTab) => {
+              setSeciliMac({ ...mac, baslangicTab: aktifTab })
+              setAktifEkran('detay')
+            }}
+              />
+            )}
             {aktifEkran === 'harita' && (
               <HaritaSayfa
                 maclar={maclar}
@@ -226,33 +259,35 @@ adminKontrol()
               />
             )}
             {aktifEkran === 'profil' && kullanici && (
-           <ProfilSayfa 
+                <ProfilSayfa 
             kullanici={kullanici} 
-            setKullanici={setKullanici} 
+            setKullanici={setKullanici}
+            setAktifEkran={setAktifEkran}
             onDegerlendirmeAc={(mac, katilimcilar) => {
-            console.log('mac:', mac)
-            console.log('katilimcilar:', katilimcilar)
-            setDegerlendirmeMac(mac)
-            setDegerlendirmeKatilimcilar(katilimcilar)
-          }}
+              setDegerlendirmeMac(mac)
+              setDegerlendirmeKatilimcilar(katilimcilar)
+            }}
           />)}
            {aktifEkran === 'arkadaslar' && kullanici && (
-              <ArkadaslarSayfa
-                kullanici={kullanici}
-                onKullaniciTikla={(id) => setHedefKullanici(id)}
-                geriDon={() => setAktifEkran('anasayfa')}
-              />
+             <ArkadaslarSayfa
+  kullanici={kullanici}
+  klavyeYuksekligi={klavyeYuksekligi}
+  onKullaniciTikla={(id) => setHedefKullanici(id)}
+  geriDon={() => setAktifEkran('anasayfa')}
+  onMesajAc={(karsi) => setSeciliOzelMesaj(karsi)}
+/>
             )}
 
             {seciliOzelMesaj && (
-              <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: '#f8f8f6', zIndex: 200, display: 'flex', flexDirection: 'column' }}>
-                <OzelMesajSayfa
-                  kullanici={kullanici}
-                  karsi={seciliOzelMesaj}
-                  geriDon={() => setSeciliOzelMesaj(null)}
-                  onKullaniciTikla={(id) => setHedefKullanici(id)}
-                />
-              </div>
+        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: klavyeYuksekligi, background: '#f8f8f6', zIndex: 1001, display: 'flex', flexDirection: 'column', transition: 'bottom 0.25s ease' }}>
+           <OzelMesajSayfa
+              kullanici={kullanici}
+              karsi={seciliOzelMesaj}
+              klavyeYuksekligi={klavyeYuksekligi}
+              geriDon={() => setSeciliOzelMesaj(null)}
+              onKullaniciTikla={(id) => setHedefKullanici(id)}
+            />
+           </div>
             )}
 
             {degerlendirmeMac && (
@@ -281,9 +316,12 @@ adminKontrol()
               </div>
             )}
 
-<div style={{ position: 'relative', zIndex: 999, flexShrink: 0, background: '#fff' }}>
-  <AltNav aktifEkran={aktifEkran} setAktifEkran={setAktifEkran} okunmamisSayisi={okunmamisSayisi} kullanici={kullanici} isAdmin={isAdmin} />
-</div>        </>
+{!seciliOzelMesaj && aktifEkran !== 'detay' && (
+  <div style={{ position: 'relative', zIndex: 999, flexShrink: 0, background: '#fff', transform: 'translateZ(0)' }}>
+    <AltNav aktifEkran={aktifEkran} setAktifEkran={setAktifEkran} okunmamisSayisi={okunmamisSayisi} kullanici={kullanici} isAdmin={isAdmin} />
+  </div>
+)}
+</>
         )}
       </div>
     </div>
@@ -292,6 +330,140 @@ adminKontrol()
 
 function StatusBar() {
   return null
+}
+
+function OnboardingSayfa({ onBitti }) {
+  const [aktif, setAktif] = useState(0)
+  const [animasyon, setAnimasyon] = useState(null)
+
+  const slides = [
+    {
+      baslik: 'Sahaya Gel',
+      aciklama: 'Yakınındaki futbol maçlarını bul, tek dokunuşla katıl',
+      renk: 'linear-gradient(160deg, #1D9E75, #0a7055)',
+svg: (
+  <svg id="Layer_1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 260">
+    <g>
+      <path d="M250.81,70.42h-22.16c-.36,1-.76,2-1.19,3h23.35c4.15,0,7.52,3.38,7.52,7.53v139.88c0,4.15-3.37,7.53-7.52,7.53H49.19c-4.15,0-7.52-3.38-7.52-7.53V80.95c0-4.15,3.37-7.53,7.52-7.53h121.99c-.43-1.01-.82-2.01-1.18-3H49.19c-5.8,0-10.52,4.73-10.52,10.53v139.88c0,5.8,4.72,10.53,10.52,10.53h201.62c5.8,0,10.52-4.73,10.52-10.53V80.95c0-5.8-4.72-10.53-10.52-10.53ZM200.72,70.42c-.46.05-.92.08-1.39.08s-.93-.03-1.39-.08h-25.82c.37.99.78,1.99,1.23,3h51.95c.44-1,.85-2,1.23-3h-25.81Z" fill="#fff"/>
+      <path d="M231.16,114.08c-5.8,0-10.53,4.72-10.53,10.53v52.57c0,5.8,4.73,10.52,10.53,10.52h29.06v-73.62h-29.06ZM257.22,184.7h-26.06c-4.15,0-7.53-3.37-7.53-7.52v-52.57c0-4.16,3.38-7.53,7.53-7.53h26.06v67.62Z" fill="#fff"/>
+      <path d="M67.99,114.08h-29.07v73.62h29.07c5.8,0,10.52-4.72,10.52-10.52v-52.57c0-5.81-4.72-10.53-10.52-10.53ZM75.51,177.18c0,4.15-3.37,7.52-7.52,7.52h-26.07v-67.62h26.07c4.15,0,7.52,3.37,7.52,7.53v52.57Z" fill="#fff"/>
+      <rect x="148.5" y="71.6" width="3" height="158.58" fill="#fff"/>
+      <path d="M151.5,116.36c-.5-.03-1-.04-1.5-.04s-1,.01-1.5.04c-18.37.78-33.07,15.97-33.07,34.53s14.7,33.75,33.07,34.53c.5.03,1,.04,1.5.04s1-.01,1.5-.04c18.37-.78,33.07-15.97,33.07-34.53s-14.7-33.75-33.07-34.53ZM151.5,182.42c-.5.03-1,.04-1.5.04s-1-.01-1.5-.04c-16.72-.78-30.07-14.62-30.07-31.53s13.35-30.75,30.07-31.53c.5-.03,1-.04,1.5-.04s1,.01,1.5.04c16.72.78,30.07,14.62,30.07,31.53s-13.35,30.75-30.07,31.53Z" fill="#fff"/>
+    </g>
+    <path d="M211.78,31.41c-3.99-1.86-8.23-2.77-12.43-2.77-7.79,0-15.46,3.1-21.15,8.93-6.09,6.24-9.32,14.86-8.44,23.61.28,2.86,1.12,5.98,2.36,9.24.37.99.78,1.99,1.23,3,5.61,12.78,16.38,27.04,23.4,35.51.69.82,1.63,1.24,2.57,1.24s1.93-.43,2.65-1.3c6.04-7.32,11.57-14.73,16.52-22.73,2.22-3.61,4.78-8.1,6.81-12.72.44-1,.85-2,1.23-3,1.24-3.24,2.14-6.46,2.4-9.4,1.11-12.46-5.86-24.33-17.15-29.61ZM199.33,70.5c-.47,0-.93-.03-1.39-.08-6.03-.69-10.72-5.81-10.72-12.03,0-6.69,5.42-12.11,12.11-12.11s12.11,5.42,12.11,12.11c0,6.22-4.69,11.34-10.72,12.03-.46.05-.92.08-1.39.08Z" fill="#fff"/>
+  </svg>
+)
+    },
+    {
+      baslik: 'İlan Aç',
+      aciklama: 'Eksik oyuncun mu var? İlan aç, doğru oyuncular seni bulsun',
+      renk: 'linear-gradient(160deg, #185FA5, #0d3d6b)',
+    svg: (
+  <svg id="Layer_1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 260">
+    <path d="M149.14,204.49c4.62,6.81,4.02,15.61-1.82,21.24-3.1,2.99-7.11,4.21-11.48,4.74-4.84-.78-9.87-2.62-12.82-6.96l-29.31-43c-12.18,7.98-27.85,4.4-35.82-7.49-7.76-11.58-5.58-26.95,5.83-35.35l18.75-12.75,32.4-65.4c2.38-4.81,8.52-6.71,13.38-6.73,11.8-.07,24.76,9.12,32.99,16.94,13.94,13.25,24.76,29.44,31.68,47.39,3.95,10.24,7.39,25.74,2.57,35.98-2,4.24-5.91,8.77-10.98,9.19l-60.53,5.06,25.17,37.13ZM188.34,147.61c3.48-9.34-.49-23.12-4.37-31.82-8.37-18.76-23.5-39.59-41.37-50.29-3.74-2.24-7.63-3.88-11.87-4.62-5.68-1-10.68,2.5-11.71,8.14-1.8,9.8,1.46,21.52,5.42,30.66,6.34,14.61,15.27,27.8,26.56,39.02,6.48,6.44,18.48,15.9,27.76,16.24,4.41.16,8.06-3.23,9.59-7.32ZM160.46,156.49c-6.81-4.74-12.3-9.18-17.63-14.81-10.33-10.94-18.66-23.32-24.86-37.03-2.97-6.7-4.98-13.16-6.62-20.66l-21.26,43.36,22.42,32.99,47.95-3.84ZM89.88,173.7l15.13-10.34-20.54-30.22-15.52,10.54c-8.43,5.78-10.03,16.74-4.42,25.02,5.74,8.48,16.6,10.98,25.34,5ZM143.09,209.66l-28.01-41.38c-.93-.15-2.77-.31-3.46.16l-11.36,7.75,28.81,42.43c2.62,3.86,7.59,4.8,11.38,2.43,3.53-2.21,5.38-7.34,2.64-11.39Z" fill="#fff"/>
+    <path d="M206.35,81.05c-2.02,1.32-4.53.07-5.38-1.27-1.29-2.06-.63-4.32,1.36-5.63l27.24-17.87c1.97-1.3,4.45-.45,5.51,1.31,1.13,1.88.64,4.23-1.35,5.53l-27.39,17.93Z" fill="#fff"/>
+    <path d="M243.98,105.66c2.27.41,3.01,3.01,2.63,4.64-.43,1.84-2.36,3.41-4.61,3.01l-32.17-5.8c-2.26-.41-3.28-2.87-2.9-4.61.46-2.1,2.37-3.5,4.68-3.08l32.37,5.84Z" fill="#fff"/>
+    <path d="M188.39,59.57c-.26,2.56-2.03,4.01-4.25,3.9s-3.84-2.02-3.59-4.44l2.98-29.27c.24-2.34,2.04-3.89,4.16-3.77,2.26.13,3.94,2.07,3.69,4.52l-2.99,29.06Z" fill="#fff"/>
+    <path d="M154.67,123.96c6.31-4.39,7.67-12.75,3.61-18.74s-12.57-7.82-18.88-3.62c-1.97,1.31-4.51.59-5.61-1.38-1.02-1.82-.46-4.1,1.54-5.39,9.91-6.4,23.12-3.67,29.62,6.04,6.42,9.61,4.08,22.78-5.67,29.49-1.79,1.23-4.12.89-5.4-.7s-1.27-4.28.79-5.71Z" fill="#fff"/>
+  </svg>
+)
+
+    },
+    {
+      baslik: 'Arkadaş Edin',
+      aciklama: 'Maçlarda tanıştığın oyuncularla bağlantı kur, takımını oluştur',
+      renk: 'linear-gradient(160deg, #e67e22, #d35400)',
+     svg: (
+  <svg id="Layer_1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 260">
+    <path d="M161.65,170.25c-5.41-9.93-13.62-18.14-23.56-23.53,5.06-19.54,22.83-34.01,43.93-34.01.86,0,1.71-.04,2.55-.09.84.06,1.69.09,2.55.09,25.53,0,36.32,17.73,41.88,29.81,1.3,2.81,4.18,3.34,7.06,2.18h0c3.87-1.56,5.02-5.94,3.44-9.8-2.74-6.68-5.74-10.85-12.51-18.04-5.94-6.32-14.3-10.54-20.36-13.24,8.17-6.97,13.36-17.32,13.36-28.87,0-20.93-17.04-37.97-37.97-37.97s-37.97,17.04-37.97,37.97c0,12.12,5.7,22.92,14.56,29.88-3.71,1.63-7.23,3.65-10.49,5.98-.02.01-.03.02-.05.04-2.03-19.02-18.18-33.88-37.73-33.88-20.93,0-37.97,17.03-37.97,37.96,0,12.12,5.7,22.93,14.57,29.87-20.57,9.03-34.97,29.6-34.97,53.47v.94c0,13.36,10.87,24.23,24.23,24.23h68.28c13.35,0,24.22-10.87,24.22-24.23v-.94c0-5.12-.66-10.08-1.91-14.81-1.19-4.58-2.93-8.93-5.14-13ZM157.05,74.74c0-13.76,11.2-24.96,24.97-24.96s24.96,11.2,24.96,24.96-11.2,24.97-24.96,24.97-24.97-11.2-24.97-24.97ZM85.38,114.72c0-13.76,11.2-24.96,24.96-24.96s24.95,11.2,24.95,24.96-11.19,24.97-24.95,24.97-24.96-11.2-24.96-24.97ZM155.7,199c0,6.19-5.03,11.23-11.22,11.23h-68.28c-6.19,0-11.23-5.04-11.23-11.23v-.94c0-25.02,20.35-45.37,45.37-45.37,4.67,0,9.17.71,13.41,2.02,4.76,1.48,9.18,3.72,13.13,6.58,3.45,2.5,6.54,5.47,9.16,8.81,3.07,3.92,5.52,8.35,7.17,13.15,1.62,4.64,2.49,9.63,2.49,14.81v.94Z" fill="#fff"/>
+    <path d="M248,185.78c-.29-3.32-3.29-5.75-6.62-5.75h-17.19c-3.43,0-6.22-2.78-6.22-6.22v-17.19c0-3.33-2.43-6.33-5.75-6.62-3.74-.33-6.88,2.62-6.88,6.29v17.51c0,3.43-2.78,6.22-6.22,6.22h-17.19c-3.33,0-6.33,2.43-6.62,5.75-.33,3.74,2.62,6.88,6.29,6.88h17.51c3.43,0,6.22,2.78,6.22,6.22v17.19c0,3.33,2.43,6.33,5.75,6.62,3.74.33,6.88-2.62,6.88-6.29v-17.51c0-3.43,2.78-6.22,6.22-6.22h17.51c3.67,0,6.61-3.14,6.29-6.88Z" fill="#fff"/>
+  </svg>
+)
+    }
+  ]
+
+  const sonrakiSlide = () => {
+    if (aktif < slides.length - 1) {
+      setAnimasyon('cik')
+      setTimeout(() => { setAktif(a => a + 1); setAnimasyon('gir') }, 200)
+      setTimeout(() => setAnimasyon(null), 400)
+    } else {
+      localStorage.setItem('onboarding_done', '1')
+      onBitti()
+    }
+  }
+
+  const oncekiSlide = () => {
+    if (aktif > 0) {
+      setAnimasyon('cikGeri')
+      setTimeout(() => { setAktif(a => a - 1); setAnimasyon('girGeri') }, 200)
+      setTimeout(() => setAnimasyon(null), 400)
+    }
+  }
+
+  const slide = slides[aktif]
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, background: slide.renk, overflow: 'hidden', position: 'relative', transition: 'background 0.4s ease' }}>
+      {/* Skip */}
+      {aktif < slides.length - 1 && (
+        <div style={{ padding: '16px 24px 0', display: 'flex', justifyContent: 'flex-end', flexShrink: 0 }}>
+          <button onClick={() => { localStorage.setItem('onboarding_done', '1'); onBitti() }} style={{ background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: 20, padding: '6px 16px', color: '#fff', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>
+            Geç
+          </button>
+        </div>
+      )}
+
+      {/* İllüstrasyon */}
+      <div style={{
+        flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 20px',
+        opacity: animasyon ? 0 : 1,
+        transform: animasyon === 'cik' ? 'translateX(-60px)' : animasyon === 'gir' ? 'translateX(60px)' : animasyon === 'cikGeri' ? 'translateX(60px)' : animasyon === 'girGeri' ? 'translateX(-60px)' : 'translateX(0)',
+        transition: 'opacity 0.2s ease, transform 0.2s ease'
+      }}>
+        <div style={{ width: '100%', maxWidth: 340, padding: '0 10px' }}>
+          {slide.svg}
+        </div>
+      </div>
+
+      {/* Metin */}
+      <div style={{
+        padding: '0 32px 40px', flexShrink: 0,
+        opacity: animasyon ? 0 : 1,
+        transform: animasyon === 'cik' ? 'translateX(-40px)' : animasyon === 'gir' ? 'translateX(40px)' : 'translateX(0)',
+        transition: 'opacity 0.2s ease, transform 0.2s ease'
+      }}>
+        <h1 style={{ fontSize: 30, fontWeight: 800, color: '#fff', margin: '0 0 12px', letterSpacing: -0.8, lineHeight: 1.2 }}>{slide.baslik}</h1>
+        <p style={{ fontSize: 16, color: 'rgba(255,255,255,0.75)', margin: '0 0 36px', lineHeight: 1.6, fontWeight: 400 }}>{slide.aciklama}</p>
+
+        {/* Dots */}
+        <div style={{ display: 'flex', gap: 8, marginBottom: 28 }}>
+          {slides.map((_, i) => (
+            <div key={i} onClick={() => setAktif(i)} style={{
+              height: 6, borderRadius: 3, cursor: 'pointer', transition: 'all 0.3s ease',
+              width: i === aktif ? 28 : 6,
+              background: i === aktif ? '#fff' : 'rgba(255,255,255,0.35)'
+            }} />
+          ))}
+        </div>
+
+        {/* Buton */}
+        <button onClick={sonrakiSlide} style={{
+          width: '100%', padding: '16px', borderRadius: 18, border: 'none', cursor: 'pointer',
+          background: '#fff', color: slide.renk, fontSize: 16, fontWeight: 700, letterSpacing: -0.3,
+          boxShadow: '0 8px 30px rgba(0,0,0,0.15)',
+        }}>
+          {aktif === slides.length - 1 ? 'Başla →' : 'Devam →'}
+        </button>
+
+        {aktif > 0 && (
+          <button onClick={oncekiSlide} style={{ width: '100%', padding: '12px', borderRadius: 18, border: 'none', cursor: 'pointer', background: 'transparent', color: 'rgba(255,255,255,0.6)', fontSize: 14, fontWeight: 500, marginTop: 8 }}>
+            ← Geri
+          </button>
+        )}
+      </div>
+    </div>
+  )
 }
 
 function GirisSayfa({ setKullanici, geriDon }) {
@@ -310,14 +482,15 @@ function GirisSayfa({ setKullanici, geriDon }) {
   if (geriDon) geriDon()
 }
   const kayitOl = async () => {
-    setYukleniyor(true); setHata('')
-    const { data, error } = await supabase.auth.signUp({ email, password: sifre })
-    if (error) { setHata(error.message); setYukleniyor(false); return }
-    if (data.user) {
-      await supabase.from('kullanicilar').insert({ id: data.user.id, isim })
-    }
-    setYukleniyor(false)
+  setYukleniyor(true); setHata('')
+  const { data, error } = await supabase.auth.signUp({ email, password: sifre })
+  if (error) { setHata(error.message); setYukleniyor(false); return }
+  if (data.user) {
+    await supabase.from('kullanicilar').insert({ id: data.user.id, isim })
   }
+  setYukleniyor(false)
+  if (geriDon) geriDon()
+}
 
  return (
   
@@ -903,7 +1076,7 @@ function MacKart({ mac, onClick, kullanici }) {
   )
 }
 
-function DetaySayfa({ mac, kullanici, geriDon, onKullaniciTikla }) {
+function DetaySayfa({ mac, kullanici, geriDon, onKullaniciTikla, klavyeYuksekligi = 0 }) {
   const [katilindi, setKatilindi] = useState(false)
   const [katilimlar, setKatilimlar] = useState([])
   const [mesajlar, setMesajlar] = useState([])
@@ -1363,7 +1536,7 @@ const mesajGonder = async () => {
 
     {/* Mesaj yazma alanı */}
     <div style={{ padding: '10px 16px 16px', background: '#fff', borderTop: '0.5px solid #ebebE8', display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
-      <input
+        <input
         ref={mesajInputRef}
         value={yeniMesaj}
         onChange={e => setYeniMesaj(e.target.value)}
@@ -1896,8 +2069,7 @@ function BildirimSayfa({ kullanici, bildirimler, setBildirimler, setOkunmamisSay
 )
 }
 
-function ProfilSayfa({ kullanici, setKullanici, onDegerlendirmeAc }) {
-
+function ProfilSayfa({ kullanici, setKullanici, onDegerlendirmeAc, setAktifEkran }) {
   const [profil, setProfil] = useState(null)
   const [duzenle, setDuzenle] = useState(false)
   const [isim, setIsim] = useState('')
@@ -2040,10 +2212,11 @@ setYorumlar(yorumData || [])
     setKaydediliyor(false)
   }
 
-  const cikisYap = async () => {
-    await supabase.auth.signOut()
-    setKullanici(null)
-  }
+const cikisYap = async () => {
+  await supabase.auth.signOut()
+  setKullanici(null)
+  setAktifEkran('anasayfa')
+}
 
   if (yukleniyor) return (
     <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -2260,13 +2433,13 @@ if (seciliMac) return (
             )}
           </div>
         )
-      {ilanlarim.length > ilanGoster && (
+})
+    )}
+          {ilanlarim.length > ilanGoster && (
   <button onClick={() => setIlanGoster(prev => prev + 4)} style={{ width: '100%', padding: '10px', background: 'none', border: '0.5px solid #ebebE8', borderRadius: 12, fontSize: 13, color: '#1D9E75', fontWeight: 600, cursor: 'pointer', marginTop: 4 }}>
     Daha fazla göster ({ilanlarim.length - ilanGoster} ilan daha)
   </button>
 )}
-      })
-    )}
 
     {aktifProfilTab === 'maclar' && (
       maclarim.length === 0 ? (
@@ -2303,13 +2476,13 @@ if (seciliMac) return (
             )}
           </div>
         )
+})
+    )}
         {maclarim.length > macGoster && (
   <button onClick={() => setMacGoster(prev => prev + 4)} style={{ width: '100%', padding: '10px', background: 'none', border: '0.5px solid #ebebE8', borderRadius: 12, fontSize: 13, color: '#1D9E75', fontWeight: 600, cursor: 'pointer', marginTop: 4 }}>
     Daha fazla göster ({maclarim.length - macGoster} maç daha)
   </button>
 )}
-      })
-    )}
   </>
 )}
 {yorumlar.length > 0 && (
@@ -2975,11 +3148,10 @@ function KullaniciProfil({ kullanici, hedefId, geriDon, onMesajAc, onKullaniciTi
 )
 }
 
-function ArkadaslarSayfa({ kullanici, geriDon, onKullaniciTikla }) {
+function ArkadaslarSayfa({ kullanici, geriDon, onKullaniciTikla, klavyeYuksekligi, onMesajAc }) {
   const [arkadaslar, setArkadaslar] = useState([])
   const [istekler, setIstekler] = useState([])
   const [aktifTab, setAktifTab] = useState('arkadaslar')
-  const [seciliArk, setSeciliArk] = useState(null)
   const [yukleniyor, setYukleniyor] = useState(true)
   const [arama, setArama] = useState('')
 
@@ -3012,18 +3184,6 @@ function ArkadaslarSayfa({ kullanici, geriDon, onKullaniciTikla }) {
     await supabase.from('arkadasliklar').delete().eq('id', id)
     setIstekler(prev => prev.filter(i => i.id !== id))
   }
-
-  if (seciliArk) return (
-  <OzelMesajSayfa
-    kullanici={kullanici}
-    karsi={seciliArk}
-    geriDon={() => setSeciliArk(null)}
-    onKullaniciTikla={(id) => {
-      setSeciliArk(null)
-      onKullaniciTikla && onKullaniciTikla(id)
-    }}
-  />
-)
 
   const arkadasBilgi = (a) => a.gonderen_id === kullanici.id ? a.alici : a.gonderen
 
@@ -3096,8 +3256,8 @@ function ArkadaslarSayfa({ kullanici, geriDon, onKullaniciTikla }) {
       )}
     </div>
   </div>
-  <button onClick={e => { e.stopPropagation(); setSeciliArk(ark) }} style={{ width: 36, height: 36, borderRadius: '50%', border: 'none', background: '#e8f7f1', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-    <svg width="16" height="16" viewBox="0 0 22 22" fill="none">
+      <button onClick={e => { e.stopPropagation(); onMesajAc && onMesajAc(ark) }} style={{ width: 36, height: 36, borderRadius: '50%', border: 'none', background: '#e8f7f1', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+      <svg width="16" height="16" viewBox="0 0 22 22" fill="none">
       <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" stroke="#1D9E75" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   </button>
@@ -3142,7 +3302,7 @@ function ArkadaslarSayfa({ kullanici, geriDon, onKullaniciTikla }) {
   )
 }
 
-function OzelMesajSayfa({ kullanici, karsi, geriDon, onKullaniciTikla }) {
+function OzelMesajSayfa({ kullanici, karsi, geriDon, onKullaniciTikla, klavyeYuksekligi }) {
   const [mesajlar, setMesajlar] = useState([])
   const [yeniMesaj, setYeniMesaj] = useState('')
   const [gonderiyor, setGonderiyor] = useState(false)
@@ -3217,8 +3377,8 @@ const gonder = async () => {
 }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
-      <div style={{ padding: '14px 22px 12px', borderBottom: '0.5px solid #ebebE8', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 12 }}>
+  <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden', height: '100%', position: 'relative' }}>
+            <div style={{ padding: '14px 22px 12px', borderBottom: '0.5px solid #ebebE8', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 12 }}>
        <span onClick={geriDon} style={{ fontSize: 24, color: '#1D9E75', cursor: 'pointer' }}>‹</span>
        <div onClick={() => onKullaniciTikla && onKullaniciTikla(karsi?.id)} style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', flex: 1 }}>
           {karsi?.avatar_url ? (
@@ -3232,8 +3392,8 @@ const gonder = async () => {
         </div>
   </div>
 
-      <div style={{ flex: 1, overflowY: 'auto', padding: '16px 22px', display: 'flex', flexDirection: 'column', gap: 12, background: '#f8f8f6' }}>
-        {mesajlar.length === 0 && (
+        <div style={{ flex: 1, overflowY: 'scroll', padding: '16px 22px', display: 'flex', flexDirection: 'column', gap: 12, background: '#f8f8f6', WebkitOverflowScrolling: 'touch' }}>
+          {mesajlar.length === 0 && (
           <div style={{ textAlign: 'center', padding: '40px 0' }}>
             <p style={{ fontSize: 32, margin: '0 0 10px' }}>💬</p>
             <p style={{ fontSize: 13, color: '#aaa' }}>Henüz mesaj yok</p>
@@ -3265,7 +3425,7 @@ const gonder = async () => {
       </div>
 
       <div style={{ padding: '10px 16px 16px', background: '#fff', borderTop: '0.5px solid #ebebE8', display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
-        <input
+            <input
           value={yeniMesaj}
           onChange={e => setYeniMesaj(e.target.value)}
           onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); gonder() } }}
@@ -3295,6 +3455,7 @@ function AdminSayfa({ kullanici }) {
   const [arama, setArama] = useState('')
   const [sikayetler, setSikayetler] = useState([])
   const [seciliKullanici, setSeciliKullanici] = useState(null)
+  const [silinecekIlan, setSilinecekIlan] = useState(null)
 
   useEffect(() => {
     const getir = async () => {
@@ -3343,10 +3504,10 @@ function AdminSayfa({ kullanici }) {
     setKullanicilar(prev => prev.map(k => k.id === kullaniciId ? { ...k, rozet } : k))
   }
 
-  const ilanSil = async (ilanId) => {
-    if (!window.confirm('Bu ilanı silmek istediğine emin misin?')) return
+ const ilanSil = async (ilanId) => {
     await supabase.from('maclar').delete().eq('id', ilanId)
     setIlanlar(prev => prev.filter(i => i.id !== ilanId))
+    setSilinecekIlan(null)
   }
 
   return (
@@ -3500,7 +3661,7 @@ function AdminSayfa({ kullanici }) {
                     {gecti ? 'Geçti' : 'Aktif'}
                   </span>
                 </div>
-                <button onClick={() => ilanSil(ilan.id)} style={{ padding: '6px 14px', borderRadius: 10, fontSize: 12, fontWeight: 500, cursor: 'pointer', border: 'none', background: '#fdecea', color: '#c0392b' }}>
+               <button onClick={() => setSilinecekIlan(ilan.id)} style={{ padding: '6px 14px', borderRadius: 10, fontSize: 12, fontWeight: 500, cursor: 'pointer', border: 'none', background: '#fdecea', color: '#c0392b' }}>
                   Sil
                 </button>
               </div>
@@ -3549,8 +3710,25 @@ function AdminSayfa({ kullanici }) {
               </div>
             ))}
           </div>
-       ) : null}
+    ) : null}
       </div>
+
+      {silinecekIlan && (
+        <div onClick={() => setSilinecekIlan(null)} style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', zIndex: 2000, display: 'flex', alignItems: 'flex-end' }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: '#fff', borderRadius: '20px 20px 0 0', padding: '24px 22px 40px', width: '100%', boxSizing: 'border-box' }}>
+            <p style={{ fontSize: 16, fontWeight: 700, margin: '0 0 8px' }}>İlanı sil</p>
+            <p style={{ fontSize: 13, color: '#aaa', margin: '0 0 20px' }}>Bu ilanı silmek istediğine emin misin? Bu işlem geri alınamaz.</p>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+              <button onClick={() => setSilinecekIlan(null)} style={{ padding: '12px', borderRadius: 12, border: 'none', background: '#f5f5f3', color: '#888', fontSize: 14, fontWeight: 500, cursor: 'pointer' }}>
+                Vazgeç
+              </button>
+              <button onClick={() => ilanSil(silinecekIlan)} style={{ padding: '12px', borderRadius: 12, border: 'none', background: '#fdecea', color: '#c0392b', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
+                Sil
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -3566,7 +3744,7 @@ function AltNav({ aktifEkran, setAktifEkran, okunmamisSayisi, kullanici, isAdmin
   ]
   
   return (
-<div style={{ background: '#fff', borderTop: '0.5px solid #ebebE8', display: 'flex', flexShrink: 0, padding: '10px 0 0', paddingBottom: 'env(safe-area-inset-bottom, 20px)' }}>
+<div style={{ background: '#fff', borderTop: '0.5px solid #ebebE8', display: 'flex', flexShrink: 0, padding: '10px 0 0', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 8px)' }}>
         {items.map(item => {
         return (
           <button key={item.id} onClick={() => {
