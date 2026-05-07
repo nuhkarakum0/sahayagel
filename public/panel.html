@@ -1204,7 +1204,8 @@ async function takvimYukle() {
 async function saatToggle(sahaId, tarih, baslangic, bitis, rezerve) {
   if (rezerve) return
 
-  const { data: mevcut } = await sb.from('saha_saatleri').select('*').eq('saha_id', sahaId).eq('tarih', tarih).eq('saat_baslangic', baslangic).maybeSingle()
+  const { data: mevcutlar } = await sb.from('saha_saatleri').select('*').eq('saha_id', sahaId).eq('tarih', tarih).eq('saat_baslangic', baslangic)
+  const mevcut = mevcutlar && mevcutlar.length > 0 ? mevcutlar[0] : null
 
   if (!mevcut) {
     await sb.from('saha_saatleri').insert({ saha_id: sahaId, tarih, saat_baslangic: baslangic, saat_bitis: bitis, musait: true })
