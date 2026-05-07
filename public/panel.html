@@ -541,6 +541,7 @@
     .saat-btn.musait { border-color: var(--green); background: var(--green-light); color: var(--green); }
     .saat-btn.dolu { border-color: #fdecea; background: #fdecea; color: #c0392b; }
     .saat-btn.rezerve { border-color: #fdf3e8; background: #fdf3e8; color: #854F0B; }
+    .saat-btn.secili { border-color: #185FA5; background: #e8eef7; color: #185FA5; }
 
     /* REZ TABLE */
     table { width: 100%; border-collapse: collapse; }
@@ -811,7 +812,8 @@
               <div class="legend-item"><div class="legend-dot dot-kapali"></div> İşaretlenmemiş</div>
             </div>
             <div class="saat-grid" id="saat-grid"></div>
-            <p style="font-size:12px;color:#aaa;margin-top:16px;">Saate tıklayarak müsait/kapalı olarak işaretleyebilirsiniz.</p>
+            <p style="font-size:12px;color:#aaa;margin-top:16px;">Müsait saatleri seçip Kaydet butonuna basın.</p>
+            <button onclick="takvimKaydet()" style="margin-top:16px;padding:12px 24px;background:#1D9E75;color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">Kaydet</button>
           </div>
         </div>
       </div>
@@ -1198,27 +1200,68 @@ async function takvimYukle() {
     else if (saatKayit?.musait === false) { sinif = 'dolu'; durum = 'Kapalı' }
     else { sinif = ''; durum = '' }
 
-    return `<button class="saat-btn ${sinif}" onclick="saatToggle('${sahaId}', '${tarihStr}', '${saatStr}', '${bitisStr}', ${!!rezerve})" ${rezerve ? 'disabled' : ''}>
+    return `<button class="saat-btn ${sinif}" data-saat="${saatStr}" onclick="saatToggle('${sahaId}', '${tarihStr}', '${saatStr}', '${bitisStr}', ${!!rezerve})" ${rezerve ? 'disabled' : ''}>
       ${saatStr}<br><small>${durum || '—'}</small>
     </button>`
   }).join('')
 }
 
-async function saatToggle(sahaId, tarih, baslangic, bitis, rezerve) {
+let seciliSaatler = new Set()
+
+function saatToggle(sahaId, tarih, baslangic, bitis, rezerve) {
   if (rezerve) return
-
-  const { data: mevcutlar } = await sb.from('saha_saatleri').select('*').eq('saha_id', sahaId).eq('tarih', tarih).eq('saat_baslangic', baslangic)
-  const mevcut = mevcutlar && mevcutlar.length > 0 ? mevcutlar[0] : null
-
-  if (!mevcut) {
-    await sb.from('saha_saatleri').insert({ saha_id: sahaId, tarih, saat_baslangic: baslangic, saat_bitis: bitis, musait: true })
-  } else if (mevcut.musait === true) {
-    await sb.from('saha_saatleri').update({ musait: false }).eq('id', mevcut.id)
+  if (seciliSaatler.has(baslangic)) {
+    seciliSaatler.delete(baslangic)
   } else {
-    await sb.from('saha_saatleri').delete().eq('id', mevcut.id)
+    seciliSaatler.add(baslangic)
+  }
+  saatGridGuncelle()
+}
+
+function saatGridGuncelle() {
+  document.querySelectorAll('.saat-btn:not([disabled])').forEach(btn => {
+    const saat = btn.getAttribute('data-saat')
+    if (seciliSaatler.has(saat)) {
+      btn.classList.add('secili')
+    } else {
+      btn.classList.remove('secili')
+    }
+  })
+}
+
+async function takvimKaydet() {
+  const sahaId = document.getElementById('takvim-saha-select').value
+  if (!sahaId) return
+
+  const pad = n => String(n).padStart(2, '0')
+  const tarihStr = `${aktifTarih.getFullYear()}-${pad(aktifTarih.getMonth()+1)}-${pad(aktifTarih.getDate())}`
+
+  // Önce rezerve olmayanları sil
+  const { data: mevcutlar } = await sb.from('saha_saatleri').select('*').eq('saha_id', sahaId).eq('tarih', tarihStr)
+  const { data: rezervasyonlar } = await sb.from('rezervasyonlar').select('saat_baslangic').eq('saha_id', sahaId).eq('tarih', tarihStr).eq('durum', 'onaylandi')
+  const rezerveSaatler = new Set((rezervasyonlar || []).map(r => r.saat_baslangic?.slice(0,5)))
+
+  for (const kayit of (mevcutlar || [])) {
+    const saat = kayit.saat_baslangic?.slice(0,5)
+    if (!rezerveSaatler.has(saat)) {
+      await sb.from('saha_saatleri').delete().eq('id', kayit.id)
+    }
   }
 
+  // Seçili saatleri müsait olarak ekle
+  const saatler08_24 = Array.from({length: 16}, (_, i) => i + 8)
+  for (const saat of saatler08_24) {
+    const saatStr = `${String(saat).padStart(2,'0')}:00`
+    const bitisStr = `${String(saat+1).padStart(2,'0')}:00`
+    if (rezerveSaatler.has(saatStr)) continue
+    if (seciliSaatler.has(saatStr)) {
+      await sb.from('saha_saatleri').insert({ saha_id: sahaId, tarih: tarihStr, saat_baslangic: saatStr, saat_bitis: bitisStr, musait: true })
+    }
+  }
+
+  seciliSaatler = new Set()
   takvimYukle()
+  alert('Kaydedildi!')
 }
 
 // REZERVASYONLAR
