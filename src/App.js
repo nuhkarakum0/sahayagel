@@ -90,17 +90,18 @@ Keyboard.addListener('keyboardWillShow', info => {
 
 useEffect(() => {
   if (!kullanici) return
-  const pushKur = async () => {
-    const izin = await PushNotifications.requestPermissions()
-    if (izin.receive === 'granted') {
-      await PushNotifications.register()
-    }
+const pushKur = async () => {
     PushNotifications.addListener('registration', async (token) => {
       await supabase
         .from('kullanicilar')
         .update({ push_token: token.value })
         .eq('id', kullanici.id)
     })
+
+    const izin = await PushNotifications.requestPermissions()
+    if (izin.receive === 'granted') {
+      await PushNotifications.register()
+    }
   }
   pushKur()
 }, [kullanici])
