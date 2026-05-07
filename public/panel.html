@@ -1187,8 +1187,8 @@ async function takvimYukle() {
     const saatStr = `${String(saat).padStart(2,'0')}:00`
     const bitisStr = `${String(saat+1).padStart(2,'0')}:00`
     
-    const rezerve = (rezervasyonlar || []).find(r => r.saat_baslangic === saatStr)
-    const saatKayit = (saatler || []).find(s => s.saat_baslangic === saatStr)
+    const rezerve = (rezervasyonlar || []).find(r => r.saat_baslangic?.slice(0,5) === saatStr)
+    const saatKayit = (saatler || []).find(s => s.saat_baslangic?.slice(0,5) === saatStr)
     
     let sinif = ''
     let durum = ''
