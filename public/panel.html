@@ -1220,7 +1220,7 @@ async function saatToggle(sahaId, tarih, baslangic, bitis, rezerve) {
 // REZERVASYONLAR
 async function rezervasyonlariYukle() {
   const { data } = await sb.from('rezervasyonlar')
-    .select('*, sahalar(isim), kullanicilar(isim)')
+    .select('*, sahalar(isim)')
     .in('saha_id', sahalar.map(s => s.id))
     .order('tarih', { ascending: false })
     .limit(50)
@@ -1295,7 +1295,7 @@ async function dashboardYukle() {
   const ayOnce = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
   const sahaIdler = sahalar.map(s => s.id)
 
-  const { data: tumRez } = await sb.from('rezervasyonlar').select('*, sahalar(isim), kullanicilar(isim)').in('saha_id', sahaIdler).eq('durum', 'onaylandi').order('olusturuldu', { ascending: false })
+const { data: tumRez } = await sb.from('rezervasyonlar').select('*, sahalar(isim)').in('saha_id', sahaIdler).eq('durum', 'onaylandi').order('olusturuldu', { ascending: false })
 
   const bugunRez = (tumRez || []).filter(r => r.tarih === bugun)
   const ayGelir = (tumRez || []).filter(r => r.tarih >= ayOnce).reduce((acc, r) => acc + (r.toplam_fiyat || 0), 0)
@@ -1312,7 +1312,7 @@ async function dashboardYukle() {
         <tbody>${sonRez.map(r => `
           <tr>
             <td><strong>${r.sahalar?.isim || '—'}</strong></td>
-            <td>${r.kullanicilar?.isim || '—'}</td>
+      <td>${r.kullanici_id?.slice(0,8) || '—'}</td>
             <td>${new Date(r.tarih).toLocaleDateString('tr-TR')}</td>
             <td>${r.saat_baslangic}</td>
             <td><strong>₺${r.toplam_fiyat}</strong></td>
