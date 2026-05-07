@@ -2197,6 +2197,19 @@ setYorumlar(yorumData || [])
     profilGetir()
   }, [kullanici.id])
 
+  const fotografKaldir = async () => {
+    if (!avatarUrl) return
+    setFotografYukleniyor(true)
+    const eskiYol = avatarUrl.split('/avatars/')[1]
+    if (eskiYol) {
+      await supabase.storage.from('avatars').remove([eskiYol])
+    }
+    await supabase.from('kullanicilar').update({ avatar_url: null }).eq('id', kullanici.id)
+    setAvatarUrl(null)
+    setProfil(prev => ({ ...prev, avatar_url: null }))
+    setFotografYukleniyor(false)
+  }
+
 
   const fotografSec = async (e) => {
     const dosya = e.target.files[0]
@@ -2283,7 +2296,7 @@ if (seciliMac) return (
 
           {/* Avatar */}
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: 16, position: 'relative', zIndex: 1, width: '100%', textAlign: 'center' }}>
-          <div style={{ position: 'relative', width: 88, height: 88, marginBottom: 14 }}>
+         <div style={{ position: 'relative', width: 88, height: 88, marginBottom: 14 }}>
             {avatarUrl ? (
               <img src={avatarUrl} alt="profil" style={{ width: 88, height: 88, borderRadius: '50%', objectFit: 'cover', border: '3px solid rgba(255,255,255,0.3)' }} />
             ) : (
@@ -2300,6 +2313,13 @@ if (seciliMac) return (
                   </svg>
                 )}
               </label>
+            )}
+            {duzenle && avatarUrl && (
+              <button onClick={fotografKaldir} style={{ position: 'absolute', top: 0, right: 0, width: 24, height: 24, background: '#e74c3c', borderRadius: '50%', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 2px 6px rgba(0,0,0,0.2)' }}>
+                <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                  <path d="M2 2l6 6M8 2l-6 6" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" />
+                </svg>
+              </button>
             )}
           </div>
 
