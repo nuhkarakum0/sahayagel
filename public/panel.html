@@ -1142,7 +1142,9 @@ async function takvimSahalariniYukle() {
     sahalar = data || []
   }
   const select = document.getElementById('takvim-saha-select')
+  const mevcutDeger = select.value
   select.innerHTML = '<option value="">Saha seç...</option>' + sahalar.map(s => `<option value="${s.id}">${s.isim}</option>`).join('')
+  if (mevcutDeger) select.value = mevcutDeger
   takvimTarihGuncelle()
 }
 
