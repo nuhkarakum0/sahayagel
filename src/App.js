@@ -2203,6 +2203,14 @@ setYorumlar(yorumData || [])
     if (!dosya) return
     setFotografYukleniyor(true)
 
+    // Eski fotoğrafı sil
+    if (avatarUrl) {
+      const eskiYol = avatarUrl.split('/avatars/')[1]
+      if (eskiYol) {
+        await supabase.storage.from('avatars').remove([eskiYol])
+      }
+    }
+
     const dosyaAdi = `${kullanici.id}/${Date.now()}.${dosya.name.split('.').pop()}`
     const { error: yukleHata } = await supabase.storage
       .from('avatars')
