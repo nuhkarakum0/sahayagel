@@ -2212,14 +2212,6 @@ setYorumlar(yorumData || [])
     if (!dosya) return
     setFotografYukleniyor(true)
 
-    // Eski fotoğrafı sil
-    if (avatarUrl) {
-      const eskiYol = avatarUrl.split('/avatars/')[1]
-      if (eskiYol) {
-        await supabase.storage.from('avatars').remove([eskiYol])
-      }
-    }
-
     const dosyaAdi = `${kullanici.id}/${Date.now()}.${dosya.name.split('.').pop()}`
     const { error: yukleHata } = await supabase.storage
       .from('avatars')
@@ -2230,17 +2222,15 @@ setYorumlar(yorumData || [])
     const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(dosyaAdi)
     const yeniUrl = urlData.publicUrl
 
-    await supabase.from('kullanicilar').update({ avatar_url: yeniUrl }).eq('id', kullanici.id)
     setAvatarUrl(yeniUrl)
-    setProfil(prev => ({ ...prev, avatar_url: yeniUrl }))
     setFotografYukleniyor(false)
   }
 
   const kaydet = async () => {
     setKaydediliyor(true)
 
-    // Fotoğraf silindiyse storage'dan da sil
-    if (!avatarUrl && profil?.avatar_url) {
+    // Fotoğraf değiştiyse veya silindiyse eski fotoğrafı storage'dan sil
+    if (profil?.avatar_url && profil.avatar_url !== avatarUrl) {
       const eskiYol = profil.avatar_url.split('/avatars/')[1]
       if (eskiYol) await supabase.storage.from('avatars').remove([eskiYol])
     }

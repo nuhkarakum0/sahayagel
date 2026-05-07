@@ -1,0 +1,1227 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sahaya Gel — Saha Paneli</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    :root {
+      --green: #1D9E75;
+      --green-dark: #0a7055;
+      --green-light: #e8f7f1;
+      --black: #0f0f0f;
+      --gray: #6b7280;
+      --border: #e8e8e4;
+      --bg: #f5f5f2;
+      --white: #ffffff;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      color: var(--black);
+      min-height: 100vh;
+    }
+
+    /* AUTH SCREEN */
+    #auth-screen {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #0a7055, #1D9E75, #25c48a);
+      padding: 24px;
+    }
+
+    .auth-card {
+      background: #fff;
+      border-radius: 24px;
+      padding: 48px 40px;
+      width: 100%;
+      max-width: 420px;
+      box-shadow: 0 24px 80px rgba(0,0,0,0.2);
+    }
+
+    .auth-logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 32px;
+    }
+
+    .auth-logo-icon {
+      width: 48px;
+      height: 48px;
+      background: var(--green-light);
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+    }
+
+    .auth-logo h1 {
+      font-family: 'Syne', sans-serif;
+      font-size: 20px;
+      font-weight: 800;
+      color: var(--black);
+      letter-spacing: -0.5px;
+    }
+
+    .auth-logo p {
+      font-size: 12px;
+      color: var(--gray);
+    }
+
+    .auth-title {
+      font-family: 'Syne', sans-serif;
+      font-size: 28px;
+      font-weight: 800;
+      color: var(--black);
+      letter-spacing: -0.8px;
+      margin-bottom: 8px;
+    }
+
+    .auth-subtitle {
+      font-size: 14px;
+      color: var(--gray);
+      margin-bottom: 32px;
+    }
+
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--gray);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 8px;
+    }
+
+    .form-group input {
+      width: 100%;
+      padding: 14px 16px;
+      border: 1.5px solid var(--border);
+      border-radius: 12px;
+      font-size: 15px;
+      font-family: 'DM Sans', sans-serif;
+      color: var(--black);
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .form-group input:focus {
+      border-color: var(--green);
+    }
+
+    .btn-primary {
+      width: 100%;
+      padding: 16px;
+      background: linear-gradient(135deg, var(--green), var(--green-dark));
+      color: #fff;
+      border: none;
+      border-radius: 14px;
+      font-size: 15px;
+      font-weight: 600;
+      font-family: 'DM Sans', sans-serif;
+      cursor: pointer;
+      margin-top: 8px;
+      transition: opacity 0.2s;
+    }
+
+    .btn-primary:hover { opacity: 0.9; }
+    .btn-primary:disabled { opacity: 0.5; cursor: default; }
+
+    .error-msg {
+      font-size: 13px;
+      color: #e74c3c;
+      margin-top: 12px;
+      text-align: center;
+    }
+
+    /* MAIN PANEL */
+    #panel-screen { display: none; }
+
+    .topbar {
+      background: #fff;
+      border-bottom: 1px solid var(--border);
+      padding: 0 32px;
+      height: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .topbar-logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .topbar-logo span {
+      font-family: 'Syne', sans-serif;
+      font-size: 18px;
+      font-weight: 800;
+      color: var(--black);
+      letter-spacing: -0.5px;
+    }
+
+    .topbar-logo small {
+      font-size: 11px;
+      color: var(--green);
+      font-weight: 600;
+      background: var(--green-light);
+      padding: 2px 8px;
+      border-radius: 20px;
+    }
+
+    .topbar-right {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .user-badge {
+      font-size: 13px;
+      color: var(--gray);
+    }
+
+    .btn-logout {
+      padding: 8px 16px;
+      background: #fdecea;
+      color: #c0392b;
+      border: none;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: 'DM Sans', sans-serif;
+    }
+
+    .main-layout {
+      display: grid;
+      grid-template-columns: 240px 1fr;
+      min-height: calc(100vh - 64px);
+    }
+
+    .sidebar {
+      background: #fff;
+      border-right: 1px solid var(--border);
+      padding: 24px 16px;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 16px;
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--gray);
+      cursor: pointer;
+      transition: all 0.15s;
+      margin-bottom: 4px;
+    }
+
+    .nav-item:hover { background: var(--bg); color: var(--black); }
+    .nav-item.active { background: var(--green-light); color: var(--green); font-weight: 600; }
+
+    .content {
+      padding: 32px;
+      overflow-y: auto;
+    }
+
+    .page { display: none; }
+    .page.active { display: block; }
+
+    .page-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 28px;
+    }
+
+    .page-title {
+      font-family: 'Syne', sans-serif;
+      font-size: 26px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+    }
+
+    .btn-add {
+      padding: 10px 20px;
+      background: var(--green);
+      color: #fff;
+      border: none;
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: 'DM Sans', sans-serif;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* STATS */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin-bottom: 28px;
+    }
+
+    .stat-card {
+      background: #fff;
+      border-radius: 16px;
+      padding: 20px;
+      border: 1px solid var(--border);
+    }
+
+    .stat-label {
+      font-size: 12px;
+      color: var(--gray);
+      font-weight: 500;
+      margin-bottom: 8px;
+    }
+
+    .stat-value {
+      font-family: 'Syne', sans-serif;
+      font-size: 28px;
+      font-weight: 800;
+      color: var(--black);
+      letter-spacing: -1px;
+    }
+
+    .stat-sub {
+      font-size: 12px;
+      color: var(--green);
+      margin-top: 4px;
+    }
+
+    /* CARDS */
+    .card {
+      background: #fff;
+      border-radius: 16px;
+      border: 1px solid var(--border);
+      overflow: hidden;
+    }
+
+    .card-header {
+      padding: 20px 24px;
+      border-bottom: 1px solid var(--border);
+      font-size: 15px;
+      font-weight: 600;
+    }
+
+    .card-body { padding: 24px; }
+
+    /* SAHA LIST */
+    .saha-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 16px;
+    }
+
+    .saha-card {
+      background: #fff;
+      border-radius: 16px;
+      border: 1px solid var(--border);
+      overflow: hidden;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .saha-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+    }
+
+    .saha-img {
+      height: 160px;
+      background: linear-gradient(135deg, #e8f7f1, #d0f0e5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 48px;
+      position: relative;
+    }
+
+    .saha-img img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .saha-badge {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+
+    .badge-aktif { background: var(--green-light); color: var(--green); }
+    .badge-pasif { background: #f5f5f3; color: #888; }
+
+    .saha-info { padding: 16px; }
+    .saha-name { font-weight: 700; font-size: 15px; margin-bottom: 4px; }
+    .saha-location { font-size: 12px; color: var(--gray); margin-bottom: 12px; }
+    .saha-price { font-size: 18px; font-weight: 700; color: var(--green); }
+    .saha-price span { font-size: 12px; font-weight: 400; color: var(--gray); }
+
+    .saha-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 14px;
+    }
+
+    .btn-sm {
+      flex: 1;
+      padding: 8px;
+      border-radius: 10px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: 'DM Sans', sans-serif;
+      border: none;
+    }
+
+    .btn-edit { background: #f5f5f3; color: var(--black); }
+    .btn-takvim { background: var(--green-light); color: var(--green); }
+    .btn-danger { background: #fdecea; color: #c0392b; }
+
+    /* MODAL */
+    .modal-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 1000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    .modal-overlay.open { display: flex; }
+
+    .modal {
+      background: #fff;
+      border-radius: 24px;
+      width: 100%;
+      max-width: 560px;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+
+    .modal-header {
+      padding: 24px 28px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .modal-title {
+      font-family: 'Syne', sans-serif;
+      font-size: 20px;
+      font-weight: 800;
+      letter-spacing: -0.3px;
+    }
+
+    .modal-close {
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      background: var(--bg);
+      border: none;
+      cursor: pointer;
+      font-size: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal-body { padding: 24px 28px; }
+    .modal-footer { padding: 16px 28px 24px; display: flex; gap: 10px; }
+
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+
+    .form-field { margin-bottom: 16px; }
+    .form-field label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--gray);
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      margin-bottom: 6px;
+    }
+
+    .form-field input,
+    .form-field select,
+    .form-field textarea {
+      width: 100%;
+      padding: 12px 14px;
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      font-size: 14px;
+      font-family: 'DM Sans', sans-serif;
+      color: var(--black);
+      outline: none;
+      transition: border-color 0.2s;
+      background: #fff;
+    }
+
+    .form-field input:focus,
+    .form-field select:focus,
+    .form-field textarea:focus {
+      border-color: var(--green);
+    }
+
+    .form-field textarea { resize: none; height: 80px; }
+
+    /* TAKVİM */
+    .takvim-nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+
+    .takvim-nav h3 {
+      font-family: 'Syne', sans-serif;
+      font-size: 18px;
+      font-weight: 700;
+    }
+
+    .takvim-nav button {
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      border: 1px solid var(--border);
+      background: #fff;
+      cursor: pointer;
+      font-size: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .saat-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+    }
+
+    .saat-btn {
+      padding: 10px 6px;
+      border-radius: 10px;
+      border: 1.5px solid var(--border);
+      background: #fff;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: 'DM Sans', sans-serif;
+      text-align: center;
+      transition: all 0.15s;
+    }
+
+    .saat-btn.musait { border-color: var(--green); background: var(--green-light); color: var(--green); }
+    .saat-btn.dolu { border-color: #fdecea; background: #fdecea; color: #c0392b; }
+    .saat-btn.rezerve { border-color: #fdf3e8; background: #fdf3e8; color: #854F0B; }
+
+    /* REZ TABLE */
+    table { width: 100%; border-collapse: collapse; }
+    th { text-align: left; padding: 12px 16px; font-size: 11px; font-weight: 600; color: var(--gray); text-transform: uppercase; letter-spacing: 0.4px; border-bottom: 1px solid var(--border); }
+    td { padding: 14px 16px; font-size: 14px; border-bottom: 1px solid var(--border); }
+    tr:last-child td { border-bottom: none; }
+
+    .badge {
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+
+    .badge-onay { background: var(--green-light); color: var(--green); }
+    .badge-iptal { background: #fdecea; color: #c0392b; }
+
+    /* GELIR */
+    .gelir-summary {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .gelir-card {
+      background: #fff;
+      border-radius: 16px;
+      padding: 20px;
+      border: 1px solid var(--border);
+      border-top: 3px solid var(--green);
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--gray);
+    }
+
+    .empty-state .emoji { font-size: 48px; margin-bottom: 16px; }
+    .empty-state p { font-size: 15px; }
+
+    .loading { text-align: center; padding: 40px; color: var(--gray); }
+
+    /* SAHA SEÇ */
+    .saha-select-bar {
+      background: #fff;
+      border-radius: 14px;
+      padding: 14px 18px;
+      border: 1px solid var(--border);
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .saha-select-bar label { font-size: 13px; font-weight: 600; color: var(--gray); white-space: nowrap; }
+    .saha-select-bar select {
+      flex: 1;
+      border: none;
+      outline: none;
+      font-size: 14px;
+      font-family: 'DM Sans', sans-serif;
+      color: var(--black);
+      background: none;
+    }
+
+    .takvim-legend {
+      display: flex;
+      gap: 16px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      color: var(--gray);
+    }
+
+    .legend-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 3px;
+    }
+
+    .dot-musait { background: var(--green-light); border: 1.5px solid var(--green); }
+    .dot-dolu { background: #fdecea; border: 1.5px solid #e74c3c; }
+    .dot-rezerve { background: #fdf3e8; border: 1.5px solid #e67e22; }
+    .dot-kapali { background: #f5f5f3; border: 1.5px solid #ddd; }
+  </style>
+</head>
+<body>
+
+<!-- AUTH -->
+<div id="auth-screen">
+  <div class="auth-card">
+    <div class="auth-logo">
+      <div class="auth-logo-icon">⚽</div>
+      <div>
+        <h1>Sahaya Gel</h1>
+        <p>Saha Sahibi Paneli</p>
+      </div>
+    </div>
+    <h2 class="auth-title">Hoş geldin</h2>
+    <p class="auth-subtitle">Sahalarını yönetmek için giriş yap</p>
+    <div class="form-group">
+      <label>E-posta</label>
+      <input type="email" id="email" placeholder="email@ornek.com">
+    </div>
+    <div class="form-group">
+      <label>Şifre</label>
+      <input type="password" id="sifre" placeholder="••••••••">
+    </div>
+    <button class="btn-primary" id="giris-btn" onclick="girisYap()">Giriş Yap</button>
+    <p class="error-msg" id="auth-error"></p>
+  </div>
+</div>
+
+<!-- PANEL -->
+<div id="panel-screen">
+  <div class="topbar">
+    <div class="topbar-logo">
+      <span>⚽ Sahaya Gel</span>
+      <small>Saha Paneli</small>
+    </div>
+    <div class="topbar-right">
+      <span class="user-badge" id="user-email"></span>
+      <button class="btn-logout" onclick="cikisYap()">Çıkış</button>
+    </div>
+  </div>
+
+  <div class="main-layout">
+    <div class="sidebar">
+      <div class="nav-item active" onclick="sayfaGoster('dashboard')">📊 &nbsp;Genel Bakış</div>
+      <div class="nav-item" onclick="sayfaGoster('sahalarim')">🏟️ &nbsp;Sahalarım</div>
+      <div class="nav-item" onclick="sayfaGoster('takvim')">📅 &nbsp;Takvim</div>
+      <div class="nav-item" onclick="sayfaGoster('rezervasyonlar')">📋 &nbsp;Rezervasyonlar</div>
+      <div class="nav-item" onclick="sayfaGoster('gelir')">💰 &nbsp;Gelir Takibi</div>
+    </div>
+
+    <div class="content">
+
+      <!-- DASHBOARD -->
+      <div class="page active" id="page-dashboard">
+        <div class="page-header">
+          <h1 class="page-title">Genel Bakış</h1>
+        </div>
+        <div class="stats-grid" id="stats-grid">
+          <div class="stat-card">
+            <div class="stat-label">Toplam Saha</div>
+            <div class="stat-value" id="stat-saha">—</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Bugünkü Rezervasyon</div>
+            <div class="stat-value" id="stat-bugun">—</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Bu Ay Gelir</div>
+            <div class="stat-value" id="stat-gelir">—</div>
+            <div class="stat-sub">₺</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Toplam Rezervasyon</div>
+            <div class="stat-value" id="stat-toplam">—</div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header">Son Rezervasyonlar</div>
+          <div class="card-body" id="son-rezervasyonlar">
+            <div class="loading">Yükleniyor...</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SAHALARIM -->
+      <div class="page" id="page-sahalarim">
+        <div class="page-header">
+          <h1 class="page-title">Sahalarım</h1>
+          <button class="btn-add" onclick="sahaModalAc()">+ Saha Ekle</button>
+        </div>
+        <div class="saha-grid" id="saha-grid">
+          <div class="loading">Yükleniyor...</div>
+        </div>
+      </div>
+
+      <!-- TAKVİM -->
+      <div class="page" id="page-takvim">
+        <div class="page-header">
+          <h1 class="page-title">Takvim</h1>
+        </div>
+        <div class="saha-select-bar">
+          <label>Saha:</label>
+          <select id="takvim-saha-select" onchange="takvimYukle()">
+            <option value="">Saha seç...</option>
+          </select>
+        </div>
+        <div class="card">
+          <div class="card-body">
+            <div class="takvim-nav">
+              <button onclick="tarihDegistir(-1)">‹</button>
+              <h3 id="takvim-tarih"></h3>
+              <button onclick="tarihDegistir(1)">›</button>
+            </div>
+            <div class="takvim-legend">
+              <div class="legend-item"><div class="legend-dot dot-musait"></div> Müsait</div>
+              <div class="legend-item"><div class="legend-dot dot-dolu"></div> Kapalı</div>
+              <div class="legend-item"><div class="legend-dot dot-rezerve"></div> Rezerve</div>
+              <div class="legend-item"><div class="legend-dot dot-kapali"></div> İşaretlenmemiş</div>
+            </div>
+            <div class="saat-grid" id="saat-grid"></div>
+            <p style="font-size:12px;color:#aaa;margin-top:16px;">Saate tıklayarak müsait/kapalı olarak işaretleyebilirsiniz.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- REZERVASYONLAR -->
+      <div class="page" id="page-rezervasyonlar">
+        <div class="page-header">
+          <h1 class="page-title">Rezervasyonlar</h1>
+        </div>
+        <div class="card">
+          <table>
+            <thead>
+              <tr>
+                <th>Saha</th>
+                <th>Kullanıcı</th>
+                <th>Tarih</th>
+                <th>Saat</th>
+                <th>Tutar</th>
+                <th>Durum</th>
+              </tr>
+            </thead>
+            <tbody id="rezervasyon-tbody">
+              <tr><td colspan="6" style="text-align:center;color:#aaa;padding:40px">Yükleniyor...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- GELİR -->
+      <div class="page" id="page-gelir">
+        <div class="page-header">
+          <h1 class="page-title">Gelir Takibi</h1>
+        </div>
+        <div class="gelir-summary">
+          <div class="gelir-card">
+            <div class="stat-label">Bugün</div>
+            <div class="stat-value" id="gelir-bugun">₺0</div>
+          </div>
+          <div class="gelir-card">
+            <div class="stat-label">Bu Hafta</div>
+            <div class="stat-value" id="gelir-hafta">₺0</div>
+          </div>
+          <div class="gelir-card">
+            <div class="stat-label">Bu Ay</div>
+            <div class="stat-value" id="gelir-ay">₺0</div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header">Gelir Detayı</div>
+          <table>
+            <thead>
+              <tr>
+                <th>Saha</th>
+                <th>Tarih</th>
+                <th>Saat</th>
+                <th>Tutar</th>
+              </tr>
+            </thead>
+            <tbody id="gelir-tbody">
+              <tr><td colspan="4" style="text-align:center;color:#aaa;padding:40px">Yükleniyor...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- SAHA EKLE/DÜZENLE MODAL -->
+<div class="modal-overlay" id="saha-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 class="modal-title" id="saha-modal-title">Saha Ekle</h2>
+      <button class="modal-close" onclick="sahaModalKapat()">×</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="saha-edit-id">
+      <div class="form-field">
+        <label>Saha Adı *</label>
+        <input type="text" id="saha-isim" placeholder="örn. Bostancı Halısaha A">
+      </div>
+      <div class="form-row">
+        <div class="form-field">
+          <label>İl *</label>
+          <input type="text" id="saha-il" placeholder="örn. İstanbul">
+        </div>
+        <div class="form-field">
+          <label>İlçe *</label>
+          <input type="text" id="saha-ilce" placeholder="örn. Kadıköy">
+        </div>
+      </div>
+      <div class="form-field">
+        <label>Adres</label>
+        <input type="text" id="saha-adres" placeholder="Tam adres">
+      </div>
+      <div class="form-row">
+        <div class="form-field">
+          <label>Saat Ücreti (₺) *</label>
+          <input type="number" id="saha-fiyat" placeholder="örn. 500">
+        </div>
+        <div class="form-field">
+          <label>Durum</label>
+          <select id="saha-aktif">
+            <option value="true">Aktif</option>
+            <option value="false">Pasif</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-field">
+        <label>Açıklama</label>
+        <textarea id="saha-aciklama" placeholder="Saha hakkında bilgi..."></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-sm btn-edit" style="flex:1;padding:12px" onclick="sahaModalKapat()">İptal</button>
+      <button class="btn-primary" style="margin:0;flex:2" onclick="sahaKaydet()">Kaydet</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const SUPABASE_URL = 'https://yalehsynrpeecglvunjz.supabase.co'
+const SUPABASE_KEY = 'sb_publishable_qUtk0bnil8pTwK5Vh_4xmQ_wg2c-S0c'
+const { createClient } = supabase
+const sb = createClient(SUPABASE_URL, SUPABASE_KEY)
+
+let aktifKullanici = null
+let aktifTarih = new Date()
+let sahalar = []
+
+// AUTH
+async function girisYap() {
+  const email = document.getElementById('email').value
+  const sifre = document.getElementById('sifre').value
+  const btn = document.getElementById('giris-btn')
+  const err = document.getElementById('auth-error')
+  
+  btn.disabled = true
+  btn.textContent = 'Giriş yapılıyor...'
+  err.textContent = ''
+
+  const { data, error } = await sb.auth.signInWithPassword({ email, password: sifre })
+  
+  if (error) {
+    err.textContent = 'E-posta veya şifre hatalı.'
+    btn.disabled = false
+    btn.textContent = 'Giriş Yap'
+    return
+  }
+
+  aktifKullanici = data.user
+  panelAc()
+}
+
+async function cikisYap() {
+  await sb.auth.signOut()
+  document.getElementById('auth-screen').style.display = 'flex'
+  document.getElementById('panel-screen').style.display = 'none'
+}
+
+function panelAc() {
+  document.getElementById('auth-screen').style.display = 'none'
+  document.getElementById('panel-screen').style.display = 'block'
+  document.getElementById('user-email').textContent = aktifKullanici.email
+  sahalariYukle()
+  dashboardYukle()
+}
+
+// SAYFA
+function sayfaGoster(sayfa) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'))
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'))
+  document.getElementById('page-' + sayfa).classList.add('active')
+  event.currentTarget.classList.add('active')
+  
+  if (sayfa === 'rezervasyonlar') rezervasyonlariYukle()
+  if (sayfa === 'gelir') gelirYukle()
+  if (sayfa === 'takvim') takvimSahalariniYukle()
+}
+
+// SAHALAR
+async function sahalariYukle() {
+  const { data } = await sb.from('sahalar').select('*').eq('sahip_id', aktifKullanici.id).order('olusturuldu', { ascending: false })
+  sahalar = data || []
+  sahaGridGuncelle()
+  dashboardYukle()
+}
+
+function sahaGridGuncelle() {
+  const grid = document.getElementById('saha-grid')
+  if (sahalar.length === 0) {
+    grid.innerHTML = '<div class="empty-state"><div class="emoji">🏟️</div><p>Henüz saha eklemediniz</p></div>'
+    return
+  }
+  grid.innerHTML = sahalar.map(s => `
+    <div class="saha-card">
+      <div class="saha-img">
+        ${s.fotograf_url ? `<img src="${s.fotograf_url}" alt="${s.isim}">` : '🏟️'}
+        <div class="saha-badge ${s.aktif ? 'badge-aktif' : 'badge-pasif'}">${s.aktif ? 'Aktif' : 'Pasif'}</div>
+      </div>
+      <div class="saha-info">
+        <div class="saha-name">${s.isim}</div>
+        <div class="saha-location">📍 ${s.ilce}, ${s.il}</div>
+        <div class="saha-price">₺${s.fiyat_saat} <span>/ saat</span></div>
+        <div class="saha-actions">
+          <button class="btn-sm btn-edit" onclick="sahaDuzenle('${s.id}')">Düzenle</button>
+          <button class="btn-sm btn-takvim" onclick="takvimeGit('${s.id}')">Takvim</button>
+          <button class="btn-sm btn-danger" onclick="sahaSil('${s.id}')">Sil</button>
+        </div>
+      </div>
+    </div>
+  `).join('')
+}
+
+function sahaModalAc() {
+  document.getElementById('saha-modal-title').textContent = 'Saha Ekle'
+  document.getElementById('saha-edit-id').value = ''
+  document.getElementById('saha-isim').value = ''
+  document.getElementById('saha-il').value = ''
+  document.getElementById('saha-ilce').value = ''
+  document.getElementById('saha-adres').value = ''
+  document.getElementById('saha-fiyat').value = ''
+  document.getElementById('saha-aciklama').value = ''
+  document.getElementById('saha-aktif').value = 'true'
+  document.getElementById('saha-modal').classList.add('open')
+}
+
+function sahaModalKapat() {
+  document.getElementById('saha-modal').classList.remove('open')
+}
+
+function sahaDuzenle(id) {
+  const s = sahalar.find(x => x.id === id)
+  if (!s) return
+  document.getElementById('saha-modal-title').textContent = 'Saha Düzenle'
+  document.getElementById('saha-edit-id').value = s.id
+  document.getElementById('saha-isim').value = s.isim
+  document.getElementById('saha-il').value = s.il || ''
+  document.getElementById('saha-ilce').value = s.ilce || ''
+  document.getElementById('saha-adres').value = s.adres || ''
+  document.getElementById('saha-fiyat').value = s.fiyat_saat
+  document.getElementById('saha-aciklama').value = s.aciklama || ''
+  document.getElementById('saha-aktif').value = s.aktif ? 'true' : 'false'
+  document.getElementById('saha-modal').classList.add('open')
+}
+
+async function sahaKaydet() {
+  const editId = document.getElementById('saha-edit-id').value
+  const veri = {
+    isim: document.getElementById('saha-isim').value,
+    il: document.getElementById('saha-il').value,
+    ilce: document.getElementById('saha-ilce').value,
+    adres: document.getElementById('saha-adres').value,
+    fiyat_saat: parseFloat(document.getElementById('saha-fiyat').value) || 0,
+    aciklama: document.getElementById('saha-aciklama').value,
+    aktif: document.getElementById('saha-aktif').value === 'true',
+    sahip_id: aktifKullanici.id,
+  }
+
+  if (!veri.isim || !veri.il || !veri.ilce) { alert('Lütfen zorunlu alanları doldurun.'); return }
+
+  if (editId) {
+    await sb.from('sahalar').update(veri).eq('id', editId)
+  } else {
+    await sb.from('sahalar').insert(veri)
+  }
+
+  sahaModalKapat()
+  sahalariYukle()
+}
+
+async function sahaSil(id) {
+  if (!confirm('Bu sahayı silmek istediğinize emin misiniz?')) return
+  await sb.from('sahalar').delete().eq('id', id)
+  sahalariYukle()
+}
+
+// TAKVİM
+async function takvimSahalariniYukle() {
+  const select = document.getElementById('takvim-saha-select')
+  select.innerHTML = '<option value="">Saha seç...</option>' + sahalar.map(s => `<option value="${s.id}">${s.isim}</option>`).join('')
+  takvimTarihGuncelle()
+}
+
+function takvimeGit(sahaId) {
+  sayfaGoster('takvim')
+  document.querySelectorAll('.nav-item').forEach((n, i) => { if (i === 2) n.classList.add('active') })
+  document.querySelectorAll('.nav-item').forEach((n, i) => { if (i !== 2) n.classList.remove('active') })
+  setTimeout(() => {
+    document.getElementById('takvim-saha-select').value = sahaId
+    takvimYukle()
+  }, 100)
+}
+
+function takvimTarihGuncelle() {
+  const gunler = ['Pazar','Pazartesi','Salı','Çarşamba','Perşembe','Cuma','Cumartesi']
+  const aylar = ['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık']
+  document.getElementById('takvim-tarih').textContent = `${gunler[aktifTarih.getDay()]}, ${aktifTarih.getDate()} ${aylar[aktifTarih.getMonth()]} ${aktifTarih.getFullYear()}`
+}
+
+function tarihDegistir(yon) {
+  aktifTarih.setDate(aktifTarih.getDate() + yon)
+  takvimTarihGuncelle()
+  takvimYukle()
+}
+
+async function takvimYukle() {
+  const sahaId = document.getElementById('takvim-saha-select').value
+  if (!sahaId) { document.getElementById('saat-grid').innerHTML = '<p style="color:#aaa;text-align:center;padding:20px">Lütfen saha seçin</p>'; return }
+
+  const tarihStr = aktifTarih.toISOString().split('T')[0]
+
+  const { data: saatler } = await sb.from('saha_saatleri').select('*').eq('saha_id', sahaId).eq('tarih', tarihStr)
+  const { data: rezervasyonlar } = await sb.from('rezervasyonlar').select('*').eq('saha_id', sahaId).eq('tarih', tarihStr).eq('durum', 'onaylandi')
+
+  const grid = document.getElementById('saat-grid')
+  const saatler08_24 = Array.from({length: 16}, (_, i) => i + 8)
+
+  grid.innerHTML = saatler08_24.map(saat => {
+    const saatStr = `${String(saat).padStart(2,'0')}:00`
+    const bitisStr = `${String(saat+1).padStart(2,'0')}:00`
+    
+    const rezerve = (rezervasyonlar || []).find(r => r.saat_baslangic === saatStr)
+    const saatKayit = (saatler || []).find(s => s.saat_baslangic === saatStr)
+    
+    let sinif = ''
+    let durum = ''
+    
+    if (rezerve) { sinif = 'rezerve'; durum = 'Rezerve' }
+    else if (saatKayit?.musait === true) { sinif = 'musait'; durum = 'Müsait' }
+    else if (saatKayit?.musait === false) { sinif = 'dolu'; durum = 'Kapalı' }
+    else { sinif = ''; durum = '' }
+
+    return `<button class="saat-btn ${sinif}" onclick="saatToggle('${sahaId}', '${tarihStr}', '${saatStr}', '${bitisStr}', ${!!rezerve})" ${rezerve ? 'disabled' : ''}>
+      ${saatStr}<br><small>${durum || '—'}</small>
+    </button>`
+  }).join('')
+}
+
+async function saatToggle(sahaId, tarih, baslangic, bitis, rezerve) {
+  if (rezerve) return
+
+  const { data: mevcut } = await sb.from('saha_saatleri').select('*').eq('saha_id', sahaId).eq('tarih', tarih).eq('saat_baslangic', baslangic).maybeSingle()
+
+  if (!mevcut) {
+    await sb.from('saha_saatleri').insert({ saha_id: sahaId, tarih, saat_baslangic: baslangic, saat_bitis: bitis, musait: true })
+  } else if (mevcut.musait === true) {
+    await sb.from('saha_saatleri').update({ musait: false }).eq('id', mevcut.id)
+  } else {
+    await sb.from('saha_saatleri').delete().eq('id', mevcut.id)
+  }
+
+  takvimYukle()
+}
+
+// REZERVASYONLAR
+async function rezervasyonlariYukle() {
+  const { data } = await sb.from('rezervasyonlar')
+    .select('*, sahalar(isim), kullanicilar(isim)')
+    .in('saha_id', sahalar.map(s => s.id))
+    .order('tarih', { ascending: false })
+    .limit(50)
+
+  const tbody = document.getElementById('rezervasyon-tbody')
+  if (!data || data.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#aaa;padding:40px">Henüz rezervasyon yok</td></tr>'
+    return
+  }
+
+  tbody.innerHTML = data.map(r => `
+    <tr>
+      <td><strong>${r.sahalar?.isim || '—'}</strong></td>
+      <td>${r.kullanicilar?.isim || '—'}</td>
+      <td>${new Date(r.tarih).toLocaleDateString('tr-TR')}</td>
+      <td>${r.saat_baslangic} – ${r.saat_bitis}</td>
+      <td><strong>₺${r.toplam_fiyat}</strong></td>
+      <td><span class="badge badge-onay">${r.durum}</span></td>
+    </tr>
+  `).join('')
+}
+
+// GELİR
+async function gelirYukle() {
+  const { data } = await sb.from('rezervasyonlar')
+    .select('toplam_fiyat, tarih, saat_baslangic, saat_bitis, sahalar(isim)')
+    .in('saha_id', sahalar.map(s => s.id))
+    .eq('durum', 'onaylandi')
+    .order('tarih', { ascending: false })
+
+  const bugun = new Date().toISOString().split('T')[0]
+  const haftaOnce = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+  const ayOnce = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+
+  const topla = (liste) => liste.reduce((acc, r) => acc + (r.toplam_fiyat || 0), 0)
+
+  document.getElementById('gelir-bugun').textContent = '₺' + topla((data || []).filter(r => r.tarih === bugun))
+  document.getElementById('gelir-hafta').textContent = '₺' + topla((data || []).filter(r => r.tarih >= haftaOnce))
+  document.getElementById('gelir-ay').textContent = '₺' + topla((data || []).filter(r => r.tarih >= ayOnce))
+
+  const tbody = document.getElementById('gelir-tbody')
+  if (!data || data.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#aaa;padding:40px">Henüz gelir yok</td></tr>'
+    return
+  }
+
+  tbody.innerHTML = data.map(r => `
+    <tr>
+      <td>${r.sahalar?.isim || '—'}</td>
+      <td>${new Date(r.tarih).toLocaleDateString('tr-TR')}</td>
+      <td>${r.saat_baslangic} – ${r.saat_bitis}</td>
+      <td><strong>₺${r.toplam_fiyat}</strong></td>
+    </tr>
+  `).join('')
+}
+
+// DASHBOARD
+async function dashboardYukle() {
+  if (!aktifKullanici) return
+
+  document.getElementById('stat-saha').textContent = sahalar.length
+
+  if (sahalar.length === 0) {
+    document.getElementById('stat-bugun').textContent = '0'
+    document.getElementById('stat-gelir').textContent = '0'
+    document.getElementById('stat-toplam').textContent = '0'
+    document.getElementById('son-rezervasyonlar').innerHTML = '<div class="empty-state"><div class="emoji">📊</div><p>Saha ekleyerek başlayın</p></div>'
+    return
+  }
+
+  const bugun = new Date().toISOString().split('T')[0]
+  const ayOnce = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+  const sahaIdler = sahalar.map(s => s.id)
+
+  const { data: tumRez } = await sb.from('rezervasyonlar').select('*, sahalar(isim), kullanicilar(isim)').in('saha_id', sahaIdler).eq('durum', 'onaylandi').order('olusturuldu', { ascending: false })
+
+  const bugunRez = (tumRez || []).filter(r => r.tarih === bugun)
+  const ayGelir = (tumRez || []).filter(r => r.tarih >= ayOnce).reduce((acc, r) => acc + (r.toplam_fiyat || 0), 0)
+
+  document.getElementById('stat-bugun').textContent = bugunRez.length
+  document.getElementById('stat-gelir').textContent = ayGelir
+  document.getElementById('stat-toplam').textContent = (tumRez || []).length
+
+  const sonRez = (tumRez || []).slice(0, 5)
+  document.getElementById('son-rezervasyonlar').innerHTML = sonRez.length === 0
+    ? '<div class="empty-state"><div class="emoji">📋</div><p>Henüz rezervasyon yok</p></div>'
+    : `<table>
+        <thead><tr><th>Saha</th><th>Kullanıcı</th><th>Tarih</th><th>Saat</th><th>Tutar</th></tr></thead>
+        <tbody>${sonRez.map(r => `
+          <tr>
+            <td><strong>${r.sahalar?.isim || '—'}</strong></td>
+            <td>${r.kullanicilar?.isim || '—'}</td>
+            <td>${new Date(r.tarih).toLocaleDateString('tr-TR')}</td>
+            <td>${r.saat_baslangic}</td>
+            <td><strong>₺${r.toplam_fiyat}</strong></td>
+          </tr>
+        `).join('')}</tbody>
+      </table>`
+}
+
+// INIT
+sb.auth.getSession().then(({ data: { session } }) => {
+  if (session) {
+    aktifKullanici = session.user
+    panelAc()
+  }
+})
+</script>
+</body>
+</html>
