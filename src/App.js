@@ -8,6 +8,7 @@ import { getCities, getDistrictsByCityCode } from 'turkey-neighbourhoods'
 import { StatusBar as CapStatusBar, Style } from '@capacitor/status-bar'
 import { Network } from '@capacitor/network'
 import { Keyboard } from '@capacitor/keyboard'
+import { PushNotifications } from '@capacitor/push-notifications'
 
 // Leaflet ikon düzeltmesi
 delete L.Icon.Default.prototype._getIconUrl
@@ -76,7 +77,7 @@ useEffect(() => {
 }, [])
 
 useEffect(() => {
-  Keyboard.addListener('keyboardWillShow', info => {
+Keyboard.addListener('keyboardWillShow', info => {
     setKlavyeYuksekligi(info.keyboardHeight)
   })
   Keyboard.addListener('keyboardWillHide', () => {
@@ -86,6 +87,23 @@ useEffect(() => {
     Keyboard.removeAllListeners()
   }
 }, [])
+
+useEffect(() => {
+  if (!kullanici) return
+  const pushKur = async () => {
+    const izin = await PushNotifications.requestPermissions()
+    if (izin.receive === 'granted') {
+      await PushNotifications.register()
+    }
+    PushNotifications.addListener('registration', async (token) => {
+      await supabase
+        .from('kullanicilar')
+        .update({ push_token: token.value })
+        .eq('id', kullanici.id)
+    })
+  }
+  pushKur()
+}, [kullanici])
 
 useEffect(() => {
   document.body.style.position = 'fixed'
@@ -2090,6 +2108,7 @@ function ProfilSayfa({ kullanici, setKullanici, onDegerlendirmeAc, setAktifEkran
   const [macGoster, setMacGoster] = useState(4)
   const [yorumlar, setYorumlar] = useState([])
   const [yorumGoster, setYorumGoster] = useState(2)
+  const [hesapSilModalAcik, setHesapSilModalAcik] = useState(false)  
   
 
   const pozisyonlar = ['Kaleci', 'Defans', 'Orta saha', 'Forvet', 'Belirtilmedi']
@@ -2213,6 +2232,14 @@ setYorumlar(yorumData || [])
   }
 
 const cikisYap = async () => {
+  await supabase.auth.signOut()
+  setKullanici(null)
+  setAktifEkran('anasayfa')
+}
+
+const hesapSil = async () => {
+  setHesapSilModalAcik(false)
+  await supabase.rpc('delete_user')
   await supabase.auth.signOut()
   setKullanici(null)
   setAktifEkran('anasayfa')
@@ -2508,10 +2535,31 @@ if (seciliMac) return (
 )}
   </>
 )}
-          {!duzenle && (
+{!duzenle && (
+            <>
             <button onClick={cikisYap} style={{ width: '100%', padding: 14, background: '#fdecea', color: '#c0392b', border: 'none', borderRadius: 14, fontSize: 14, fontWeight: 500, cursor: 'pointer', marginTop: 10 }}>
               Çıkış yap
             </button>
+            <button onClick={() => setHesapSilModalAcik(true)} style={{ width: '100%', padding: 14, background: 'transparent', color: '#c0392b', border: '0.5px solid #fdecea', borderRadius: 14, fontSize: 13, fontWeight: 500, cursor: 'pointer', marginTop: 8 }}>
+              Hesabımı sil
+            </button>
+            {hesapSilModalAcik && (
+              <div onClick={() => setHesapSilModalAcik(false)} style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', zIndex: 2000, display: 'flex', alignItems: 'flex-end' }}>
+                <div onClick={e => e.stopPropagation()} style={{ background: '#fff', borderRadius: '20px 20px 0 0', padding: '24px 22px 40px', width: '100%', boxSizing: 'border-box' }}>
+                  <p style={{ fontSize: 18, fontWeight: 700, margin: '0 0 8px' }}>Hesabını sil</p>
+                  <p style={{ fontSize: 13, color: '#aaa', margin: '0 0 20px', lineHeight: 1.6 }}>Tüm verileriniz kalıcı olarak silinecek. Bu işlem geri alınamaz.</p>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                    <button onClick={() => setHesapSilModalAcik(false)} style={{ padding: '12px', borderRadius: 12, border: 'none', background: '#f5f5f3', color: '#888', fontSize: 14, fontWeight: 500, cursor: 'pointer' }}>
+                      Vazgeç
+                    </button>
+                    <button onClick={hesapSil} style={{ padding: '12px', borderRadius: 12, border: 'none', background: '#fdecea', color: '#c0392b', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
+                      Hesabı sil
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+            </>
           )}
         </div>
       </div>
@@ -2528,6 +2576,22 @@ async function bildirimGonder(kullaniciId, baslik, icerik, tip, macId, gonderenA
     gonderen_avatar: gonderenAvatar,
     gonderen_id: gonderenId,
   })
+
+  const { data: profil } = await supabase
+    .from('kullanicilar')
+    .select('push_token')
+    .eq('id', kullaniciId)
+    .single()
+
+  if (profil?.push_token) {
+    await supabase.functions.invoke('push-bildirim', {
+      body: {
+        push_token: profil.push_token,
+        baslik,
+        icerik,
+      }
+    })
+  }
 }
 
 function KonumSecici({ onKonumSec }) {
