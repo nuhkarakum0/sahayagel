@@ -1592,6 +1592,7 @@ const mesajGonder = async () => {
           }
           await supabase.from('maclar').delete().eq('id', mac.id)
           geriDon()
+          setSeciliMac && setSeciliMac(null)
         }} style={{ padding: '12px', borderRadius: 12, border: 'none', background: '#fdecea', color: '#c0392b', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
           İptal et
         </button>
@@ -2201,17 +2202,8 @@ setYorumlar(yorumData || [])
     profilGetir()
   }, [kullanici.id])
 
-  const fotografKaldir = async () => {
-    if (!avatarUrl) return
-    setFotografYukleniyor(true)
-    const eskiYol = avatarUrl.split('/avatars/')[1]
-    if (eskiYol) {
-      await supabase.storage.from('avatars').remove([eskiYol])
-    }
-    await supabase.from('kullanicilar').update({ avatar_url: null }).eq('id', kullanici.id)
+  const fotografKaldir = () => {
     setAvatarUrl(null)
-    setProfil(prev => ({ ...prev, avatar_url: null }))
-    setFotografYukleniyor(false)
   }
 
 
@@ -2246,12 +2238,19 @@ setYorumlar(yorumData || [])
 
   const kaydet = async () => {
     setKaydediliyor(true)
+
+    // Fotoğraf silindiyse storage'dan da sil
+    if (!avatarUrl && profil?.avatar_url) {
+      const eskiYol = profil.avatar_url.split('/avatars/')[1]
+      if (eskiYol) await supabase.storage.from('avatars').remove([eskiYol])
+    }
+
     const { error } = await supabase
       .from('kullanicilar')
-      .update({ isim, bio, pozisyon, seviye })
+      .update({ isim, bio, pozisyon, seviye, avatar_url: avatarUrl })
       .eq('id', kullanici.id)
     if (!error) {
-      setProfil(prev => ({ ...prev, isim, bio, pozisyon, seviye }))
+      setProfil(prev => ({ ...prev, isim, bio, pozisyon, seviye, avatar_url: avatarUrl }))
       setDuzenle(false)
     }
     setKaydediliyor(false)
