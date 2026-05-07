@@ -1661,14 +1661,18 @@ const mesajGonder = async () => {
         </div>
       </div>
 
-      {gosterButon && katilim.durum === 'bekliyor' && (
+{gosterButon && (katilim.durum === 'bekliyor' || katilim.durum === 'onaylandi' || katilim.durum === 'reddedildi') && (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-          <button onClick={onReddet} style={{ padding: '8px', borderRadius: 10, border: 'none', background: '#fdecea', color: '#c0392b', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>
-            Reddet
-          </button>
-          <button onClick={onOnayla} style={{ padding: '8px', borderRadius: 10, border: 'none', background: '#e8f7f1', color: '#0F6E56', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>
-            Onayla ✓
-          </button>
+          {katilim.durum !== 'reddedildi' && (
+            <button onClick={onReddet} style={{ padding: '8px', borderRadius: 10, border: 'none', background: '#fdecea', color: '#c0392b', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>
+              Reddet
+            </button>
+          )}
+          {katilim.durum !== 'onaylandi' && (
+            <button onClick={onOnayla} style={{ padding: '8px', borderRadius: 10, border: 'none', background: '#e8f7f1', color: '#0F6E56', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>
+              Onayla ✓
+            </button>
+          )}
         </div>
       )}
     </div>
@@ -2261,6 +2265,10 @@ const cikisYap = async () => {
 
 const hesapSil = async () => {
   setHesapSilModalAcik(false)
+  if (avatarUrl) {
+    const eskiYol = avatarUrl.split('/avatars/')[1]
+    if (eskiYol) await supabase.storage.from('avatars').remove([eskiYol])
+  }
   await supabase.rpc('delete_user')
   await supabase.auth.signOut()
   setKullanici(null)
@@ -2283,9 +2291,18 @@ if (seciliMac) return (
     <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
       <div style={{ padding: '14px 22px 12px', borderBottom: '0.5px solid #ebebE8', flexShrink: 0, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <h2 style={{ fontSize: 20, fontWeight: 500, margin: 0 }}>Profilim</h2>
-        <button onClick={() => setDuzenle(!duzenle)} style={{ fontSize: 13, color: '#1D9E75', fontWeight: 500, background: 'none', border: 'none', cursor: 'pointer' }}>
-          {duzenle ? 'İptal' : 'Düzenle'}
-        </button>
+        <button onClick={() => {
+  if (duzenle) {
+    setIsim(profil?.isim || '')
+    setBio(profil?.bio || '')
+    setPozisyon(profil?.pozisyon || 'Belirtilmedi')
+    setSeviye(profil?.seviye || 'Orta')
+    setAvatarUrl(profil?.avatar_url || null)
+  }
+  setDuzenle(!duzenle)
+}} style={{ fontSize: 13, color: '#1D9E75', fontWeight: 500, background: 'none', border: 'none', cursor: 'pointer' }}>
+  {duzenle ? 'İptal' : 'Düzenle'}
+</button>
       </div>
 
       <div style={{ flex: 1, overflowY: 'auto' }}>
