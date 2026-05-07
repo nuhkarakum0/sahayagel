@@ -1172,7 +1172,8 @@ async function takvimYukle() {
   const sahaId = document.getElementById('takvim-saha-select').value
   if (!sahaId) { document.getElementById('saat-grid').innerHTML = '<p style="color:#aaa;text-align:center;padding:20px">Lütfen saha seçin</p>'; return }
 
-  const tarihStr = aktifTarih.toISOString().split('T')[0]
+  const pad = n => String(n).padStart(2, '0')
+  const tarihStr = `${aktifTarih.getFullYear()}-${pad(aktifTarih.getMonth()+1)}-${pad(aktifTarih.getDate())}`
 
   const { data: saatler } = await sb.from('saha_saatleri').select('*').eq('saha_id', sahaId).eq('tarih', tarihStr)
   const { data: rezervasyonlar } = await sb.from('rezervasyonlar').select('*').eq('saha_id', sahaId).eq('tarih', tarihStr).eq('durum', 'onaylandi')
