@@ -3606,10 +3606,13 @@ function AdminSayfa({ kullanici }) {
 const [silinecekIlan, setSilinecekIlan] = useState(null)
 
 const ilanSil = async (ilanId) => {
-    await supabase.from('maclar').delete().eq('id', ilanId)
+  if (!ilanId) return
+  const { error } = await supabase.from('maclar').delete().eq('id', ilanId)
+  if (!error) {
     setIlanlar(prev => prev.filter(i => i.id !== ilanId))
-    setSilinecekIlan(null)
   }
+  setSilinecekIlan(null)
+}
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
