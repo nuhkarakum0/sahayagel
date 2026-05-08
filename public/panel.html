@@ -1291,6 +1291,7 @@ async function takvimKaydet() {
       musait: takvimDurum[saatStr] === 'musait'
     })
   }
+  await takvimYukle()
   const mesaj = document.getElementById('kaydet-mesaj')
   if (mesaj) { mesaj.style.display = 'inline'; setTimeout(() => mesaj.style.display = 'none', 2000) }
 }
