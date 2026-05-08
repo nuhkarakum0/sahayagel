@@ -3603,7 +3603,9 @@ function AdminSayfa({ kullanici }) {
     setKullanicilar(prev => prev.map(k => k.id === kullaniciId ? { ...k, rozet } : k))
   }
 
- const ilanSil = async (ilanId) => {
+const [silinecekIlan, setSilinecekIlan] = useState(null)
+
+const ilanSil = async (ilanId) => {
     await supabase.from('maclar').delete().eq('id', ilanId)
     setIlanlar(prev => prev.filter(i => i.id !== ilanId))
     setSilinecekIlan(null)
