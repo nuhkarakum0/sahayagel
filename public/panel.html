@@ -1024,7 +1024,7 @@ function sayfaGoster(sayfa) {
   
   if (sayfa === 'rezervasyonlar') rezervasyonlariYukle()
   if (sayfa === 'gelir') gelirYukle()
-  if (sayfa === 'takvim') takvimSahalariniYukle()
+  if (sayfa === 'takvim') { sahalariYukle().then(() => takvimSahalariniYukle()) }
 }
 
 // SAHALAR
