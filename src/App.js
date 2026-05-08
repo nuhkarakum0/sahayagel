@@ -3603,8 +3603,6 @@ function AdminSayfa({ kullanici }) {
     setKullanicilar(prev => prev.map(k => k.id === kullaniciId ? { ...k, rozet } : k))
   }
 
-const [silinecekIlan, setSilinecekIlan] = useState(null)
-
 const ilanSil = async (ilanId) => {
   if (!ilanId) return
   const { error } = await supabase.from('maclar').delete().eq('id', ilanId)
