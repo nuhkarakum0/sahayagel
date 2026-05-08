@@ -541,7 +541,6 @@
     .saat-btn.musait { border-color: var(--green); background: var(--green-light); color: var(--green); }
     .saat-btn.dolu { border-color: #fdecea; background: #fdecea; color: #c0392b; }
     .saat-btn.rezerve { border-color: #fdf3e8; background: #fdf3e8; color: #854F0B; }
-    .saat-btn.secili { border-color: #185FA5; background: #e8eef7; color: #185FA5; }
 
     /* REZ TABLE */
     table { width: 100%; border-collapse: collapse; }
@@ -735,11 +734,11 @@
 
   <div class="main-layout">
     <div class="sidebar">
-      <div class="nav-item active" onclick="sayfaGoster('dashboard', this)">📊 &nbsp;Genel Bakış</div>
-      <div class="nav-item" onclick="sayfaGoster('sahalarim', this)">🏟️ &nbsp;Sahalarım</div>
-      <div class="nav-item" onclick="sayfaGoster('takvim', this)">📅 &nbsp;Takvim</div>
-      <div class="nav-item" onclick="sayfaGoster('rezervasyonlar', this)">📋 &nbsp;Rezervasyonlar</div>
-      <div class="nav-item" onclick="sayfaGoster('gelir', this)">💰 &nbsp;Gelir Takibi</div>
+      <div class="nav-item active" onclick="sayfaGoster('dashboard')">📊 &nbsp;Genel Bakış</div>
+      <div class="nav-item" onclick="sayfaGoster('sahalarim')">🏟️ &nbsp;Sahalarım</div>
+      <div class="nav-item" onclick="sayfaGoster('takvim')">📅 &nbsp;Takvim</div>
+      <div class="nav-item" onclick="sayfaGoster('rezervasyonlar')">📋 &nbsp;Rezervasyonlar</div>
+      <div class="nav-item" onclick="sayfaGoster('gelir')">💰 &nbsp;Gelir Takibi</div>
     </div>
 
     <div class="content">
@@ -792,28 +791,54 @@
         <div class="page-header">
           <h1 class="page-title">Takvim</h1>
         </div>
-        <div class="saha-select-bar">
-          <label>Saha:</label>
-          <select id="takvim-saha-select" onchange="takvimYukle()">
-            <option value="">Saha seç...</option>
-          </select>
+
+        <!-- Saha + Tarih seç -->
+        <div style="display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap;">
+          <div class="saha-select-bar" style="flex:1;min-width:200px;margin-bottom:0;">
+            <label>Saha:</label>
+            <select id="takvim-saha-select" onchange="takvimYukle()">
+              <option value="">Saha seç...</option>
+            </select>
+          </div>
+          <div class="saha-select-bar" style="flex:1;min-width:200px;margin-bottom:0;">
+            <label>Tarih:</label>
+            <input type="date" id="takvim-tarih-input" onchange="tarihInputDegisti()" style="border:none;outline:none;font-size:14px;font-family:'DM Sans',sans-serif;color:#0f0f0f;background:none;flex:1;">
+          </div>
         </div>
+
         <div class="card">
           <div class="card-body">
-            <div class="takvim-nav">
-              <button onclick="tarihDegistir(-1)">‹</button>
-              <h3 id="takvim-tarih"></h3>
-              <button onclick="tarihDegistir(1)">›</button>
+            <!-- Tarih nav -->
+            <div class="takvim-nav" style="margin-bottom:16px;">
+              <button onclick="tarihDegistir(-1)" title="Önceki gün">‹</button>
+              <div style="text-align:center;">
+                <h3 id="takvim-tarih" style="font-size:18px;"></h3>
+              </div>
+              <button onclick="tarihDegistir(1)" title="Sonraki gün">›</button>
             </div>
-            <div class="takvim-legend">
+
+            <!-- Toplu işlem butonları -->
+            <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
+              <button onclick="tumunuMusaitYap()" style="padding:8px 16px;background:#e8f7f1;color:#0F6E56;border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">✓ Tümünü Müsait Yap</button>
+              <button onclick="tumunuDoluYap()" style="padding:8px 16px;background:#fdecea;color:#c0392b;border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">✕ Tümünü Kapat</button>
+              <button onclick="haftayaKopyala()" style="padding:8px 16px;background:#e8eef7;color:#185FA5;border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">📅 Bu Ayarları Haftaya Kopyala</button>
+            </div>
+
+            <!-- Legend -->
+            <div class="takvim-legend" style="margin-bottom:16px;">
               <div class="legend-item"><div class="legend-dot dot-musait"></div> Müsait</div>
               <div class="legend-item"><div class="legend-dot dot-dolu"></div> Kapalı</div>
               <div class="legend-item"><div class="legend-dot dot-rezerve"></div> Rezerve</div>
-              <div class="legend-item"><div class="legend-dot dot-kapali"></div> İşaretlenmemiş</div>
             </div>
+
+            <!-- Saat grid -->
             <div class="saat-grid" id="saat-grid"></div>
-            <p style="font-size:12px;color:#aaa;margin-top:16px;">Müsait saatleri seçip Kaydet butonuna basın.</p>
-            <button onclick="takvimKaydet()" style="margin-top:16px;padding:12px 24px;background:#1D9E75;color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">Kaydet</button>
+
+            <!-- Kaydet -->
+            <div style="margin-top:20px;display:flex;gap:10px;align-items:center;">
+              <button onclick="takvimKaydet()" style="padding:12px 32px;background:#1D9E75;color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">Kaydet</button>
+              <span id="kaydet-mesaj" style="font-size:13px;color:#1D9E75;display:none;">✓ Kaydedildi!</span>
+            </div>
           </div>
         </div>
       </div>
@@ -991,11 +1016,11 @@ function panelAc() {
 }
 
 // SAYFA
-function sayfaGoster(sayfa, el) {
+function sayfaGoster(sayfa) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'))
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'))
   document.getElementById('page-' + sayfa).classList.add('active')
-  if (el) el.classList.add('active')
+  event.currentTarget.classList.add('active')
   
   if (sayfa === 'rezervasyonlar') rezervasyonlariYukle()
   if (sayfa === 'gelir') gelirYukle()
@@ -1138,6 +1163,8 @@ async function sahaSil(id) {
 }
 
 // TAKVİM
+let takvimDurum = {}
+
 async function takvimSahalariniYukle() {
   if (sahalar.length === 0) {
     const { data } = await sb.from('sahalar').select('*').eq('sahip_id', aktifKullanici.id)
@@ -1164,6 +1191,9 @@ function takvimTarihGuncelle() {
   const gunler = ['Pazar','Pazartesi','Salı','Çarşamba','Perşembe','Cuma','Cumartesi']
   const aylar = ['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık']
   document.getElementById('takvim-tarih').textContent = `${gunler[aktifTarih.getDay()]}, ${aktifTarih.getDate()} ${aylar[aktifTarih.getMonth()]} ${aktifTarih.getFullYear()}`
+  const pad = n => String(n).padStart(2,'0')
+  const inp = document.getElementById('takvim-tarih-input')
+  if (inp) inp.value = `${aktifTarih.getFullYear()}-${pad(aktifTarih.getMonth()+1)}-${pad(aktifTarih.getDate())}`
 }
 
 function tarihDegistir(yon) {
@@ -1172,102 +1202,135 @@ function tarihDegistir(yon) {
   takvimYukle()
 }
 
+function tarihInputDegisti() {
+  const val = document.getElementById('takvim-tarih-input').value
+  if (!val) return
+  const [y, m, d] = val.split('-').map(Number)
+  aktifTarih = new Date(y, m-1, d)
+  takvimTarihGuncelle()
+  takvimYukle()
+}
+
+function getTarihStr() {
+  const pad = n => String(n).padStart(2, '0')
+  return `${aktifTarih.getFullYear()}-${pad(aktifTarih.getMonth()+1)}-${pad(aktifTarih.getDate())}`
+}
+
 async function takvimYukle() {
   const sahaId = document.getElementById('takvim-saha-select').value
-  if (!sahaId) { document.getElementById('saat-grid').innerHTML = '<p style="color:#aaa;text-align:center;padding:20px">Lütfen saha seçin</p>'; return }
-
-  const pad = n => String(n).padStart(2, '0')
-  const tarihStr = `${aktifTarih.getFullYear()}-${pad(aktifTarih.getMonth()+1)}-${pad(aktifTarih.getDate())}`
-
+  if (!sahaId) {
+    document.getElementById('saat-grid').innerHTML = '<p style="color:#aaa;text-align:center;padding:20px">Lütfen saha seçin</p>'
+    return
+  }
+  const tarihStr = getTarihStr()
   const { data: saatler } = await sb.from('saha_saatleri').select('*').eq('saha_id', sahaId).eq('tarih', tarihStr)
   const { data: rezervasyonlar } = await sb.from('rezervasyonlar').select('*').eq('saha_id', sahaId).eq('tarih', tarihStr).eq('durum', 'onaylandi')
 
-  const grid = document.getElementById('saat-grid')
+  takvimDurum = {}
   const saatler08_24 = Array.from({length: 16}, (_, i) => i + 8)
+  saatler08_24.forEach(saat => {
+    const saatStr = `${String(saat).padStart(2,'0')}:00`
+    const rezerve = (rezervasyonlar || []).find(r => r.saat_baslangic?.slice(0,5) === saatStr)
+    const kayit = (saatler || []).find(s => s.saat_baslangic?.slice(0,5) === saatStr)
+    if (rezerve) takvimDurum[saatStr] = 'rezerve'
+    else if (kayit) takvimDurum[saatStr] = kayit.musait ? 'musait' : 'dolu'
+    else takvimDurum[saatStr] = 'musait'
+  })
+  saatGridCiz()
+}
 
+function saatGridCiz() {
+  const saatler08_24 = Array.from({length: 16}, (_, i) => i + 8)
+  const grid = document.getElementById('saat-grid')
   grid.innerHTML = saatler08_24.map(saat => {
     const saatStr = `${String(saat).padStart(2,'0')}:00`
-    const bitisStr = `${String(saat+1).padStart(2,'0')}:00`
-    
-    const rezerve = (rezervasyonlar || []).find(r => r.saat_baslangic?.slice(0,5) === saatStr)
-    const saatKayit = (saatler || []).find(s => s.saat_baslangic?.slice(0,5) === saatStr)
-    
-    let sinif = ''
-    let durum = ''
-    
-    if (rezerve) { sinif = 'rezerve'; durum = 'Rezerve' }
-    else if (saatKayit?.musait === true) { sinif = 'musait'; durum = 'Müsait' }
-    else if (saatKayit?.musait === false) { sinif = 'dolu'; durum = 'Kapalı' }
-    else { sinif = ''; durum = '' }
-
-    return `<button class="saat-btn ${sinif}" data-saat="${saatStr}" onclick="saatToggle('${sahaId}', '${tarihStr}', '${saatStr}', '${bitisStr}', ${!!rezerve})" ${rezerve ? 'disabled' : ''}>
-      ${saatStr}<br><small>${durum || '—'}</small>
+    const durum = takvimDurum[saatStr] || 'musait'
+    const rezerve = durum === 'rezerve'
+    const sinif = durum === 'musait' ? 'musait' : durum === 'dolu' ? 'dolu' : 'rezerve'
+    const label = durum === 'musait' ? 'Müsait' : durum === 'dolu' ? 'Kapalı' : 'Rezerve'
+    return `<button class="saat-btn ${sinif}" onclick="saatTikla('${saatStr}')" ${rezerve ? 'disabled' : ''}>
+      ${saatStr}<br><small>${label}</small>
     </button>`
   }).join('')
 }
 
-let seciliSaatler = new Set()
-
-function saatToggle(sahaId, tarih, baslangic, bitis, rezerve) {
-  if (rezerve) return
-  if (seciliSaatler.has(baslangic)) {
-    seciliSaatler.delete(baslangic)
-  } else {
-    seciliSaatler.add(baslangic)
-  }
-  saatGridGuncelle()
+function saatTikla(saatStr) {
+  if (takvimDurum[saatStr] === 'rezerve') return
+  takvimDurum[saatStr] = takvimDurum[saatStr] === 'musait' ? 'dolu' : 'musait'
+  saatGridCiz()
 }
 
-function saatGridGuncelle() {
-  document.querySelectorAll('.saat-btn:not([disabled])').forEach(btn => {
-    const saat = btn.getAttribute('data-saat')
-    if (seciliSaatler.has(saat)) {
-      btn.classList.add('secili')
-    } else {
-      btn.classList.remove('secili')
-    }
-  })
+function tumunuMusaitYap() {
+  Object.keys(takvimDurum).forEach(s => { if (takvimDurum[s] !== 'rezerve') takvimDurum[s] = 'musait' })
+  saatGridCiz()
+}
+
+function tumunuDoluYap() {
+  Object.keys(takvimDurum).forEach(s => { if (takvimDurum[s] !== 'rezerve') takvimDurum[s] = 'dolu' })
+  saatGridCiz()
 }
 
 async function takvimKaydet() {
   const sahaId = document.getElementById('takvim-saha-select').value
-  if (!sahaId) return
-
-  const pad = n => String(n).padStart(2, '0')
-  const tarihStr = `${aktifTarih.getFullYear()}-${pad(aktifTarih.getMonth()+1)}-${pad(aktifTarih.getDate())}`
-
-  // Önce rezerve olmayanları sil
+  if (!sahaId) { alert('Lütfen saha seçin'); return }
+  const tarihStr = getTarihStr()
   const { data: mevcutlar } = await sb.from('saha_saatleri').select('*').eq('saha_id', sahaId).eq('tarih', tarihStr)
-  const { data: rezervasyonlar } = await sb.from('rezervasyonlar').select('saat_baslangic').eq('saha_id', sahaId).eq('tarih', tarihStr).eq('durum', 'onaylandi')
-  const rezerveSaatler = new Set((rezervasyonlar || []).map(r => r.saat_baslangic?.slice(0,5)))
-
   for (const kayit of (mevcutlar || [])) {
-    const saat = kayit.saat_baslangic?.slice(0,5)
-    if (!rezerveSaatler.has(saat)) {
+    if (takvimDurum[kayit.saat_baslangic?.slice(0,5)] !== 'rezerve') {
       await sb.from('saha_saatleri').delete().eq('id', kayit.id)
     }
   }
-
-  // Seçili saatleri müsait olarak ekle
   const saatler08_24 = Array.from({length: 16}, (_, i) => i + 8)
   for (const saat of saatler08_24) {
     const saatStr = `${String(saat).padStart(2,'0')}:00`
     const bitisStr = `${String(saat+1).padStart(2,'0')}:00`
-    if (rezerveSaatler.has(saatStr)) continue
-    if (seciliSaatler.has(saatStr)) {
-      await sb.from('saha_saatleri').insert({ saha_id: sahaId, tarih: tarihStr, saat_baslangic: saatStr, saat_bitis: bitisStr, musait: true })
+    if (takvimDurum[saatStr] === 'rezerve') continue
+    await sb.from('saha_saatleri').insert({
+      saha_id: sahaId, tarih: tarihStr,
+      saat_baslangic: saatStr, saat_bitis: bitisStr,
+      musait: takvimDurum[saatStr] === 'musait'
+    })
+  }
+  const mesaj = document.getElementById('kaydet-mesaj')
+  if (mesaj) { mesaj.style.display = 'inline'; setTimeout(() => mesaj.style.display = 'none', 2000) }
+}
+
+async function haftayaKopyala() {
+  const sahaId = document.getElementById('takvim-saha-select').value
+  if (!sahaId) { alert('Lütfen saha seçin'); return }
+  if (!confirm('Bu günün saatlerini önümüzdeki 7 güne kopyalamak istiyor musunuz?')) return
+  for (let gun = 1; gun <= 7; gun++) {
+    const hedef = new Date(aktifTarih)
+    hedef.setDate(hedef.getDate() + gun)
+    const pad = n => String(n).padStart(2,'0')
+    const tarihStr = `${hedef.getFullYear()}-${pad(hedef.getMonth()+1)}-${pad(hedef.getDate())}`
+    const { data: mevcutlar } = await sb.from('saha_saatleri').select('*').eq('saha_id', sahaId).eq('tarih', tarihStr)
+    const { data: rezler } = await sb.from('rezervasyonlar').select('saat_baslangic').eq('saha_id', sahaId).eq('tarih', tarihStr).eq('durum', 'onaylandi')
+    const rezerveSaatler = new Set((rezler || []).map(r => r.saat_baslangic?.slice(0,5)))
+    for (const kayit of (mevcutlar || [])) {
+      if (!rezerveSaatler.has(kayit.saat_baslangic?.slice(0,5))) {
+        await sb.from('saha_saatleri').delete().eq('id', kayit.id)
+      }
+    }
+    const saatler08_24 = Array.from({length: 16}, (_, i) => i + 8)
+    for (const saat of saatler08_24) {
+      const saatStr = `${String(saat).padStart(2,'0')}:00`
+      const bitisStr = `${String(saat+1).padStart(2,'0')}:00`
+      if (rezerveSaatler.has(saatStr)) continue
+      await sb.from('saha_saatleri').insert({
+        saha_id: sahaId, tarih: tarihStr,
+        saat_baslangic: saatStr, saat_bitis: bitisStr,
+        musait: takvimDurum[saatStr] === 'musait'
+      })
     }
   }
-
-  seciliSaatler = new Set()
-  takvimYukle()
-  alert('Kaydedildi!')
+  alert('7 güne kopyalandı!')
 }
 
 // REZERVASYONLAR
 async function rezervasyonlariYukle() {
   const { data } = await sb.from('rezervasyonlar')
-    .select('*, sahalar(isim)')
+    .select('*, sahalar(isim), kullanicilar(isim)')
     .in('saha_id', sahalar.map(s => s.id))
     .order('tarih', { ascending: false })
     .limit(50)
@@ -1342,7 +1405,7 @@ async function dashboardYukle() {
   const ayOnce = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
   const sahaIdler = sahalar.map(s => s.id)
 
-const { data: tumRez } = await sb.from('rezervasyonlar').select('*, sahalar(isim)').in('saha_id', sahaIdler).eq('durum', 'onaylandi').order('olusturuldu', { ascending: false })
+  const { data: tumRez } = await sb.from('rezervasyonlar').select('*, sahalar(isim), kullanicilar(isim)').in('saha_id', sahaIdler).eq('durum', 'onaylandi').order('olusturuldu', { ascending: false })
 
   const bugunRez = (tumRez || []).filter(r => r.tarih === bugun)
   const ayGelir = (tumRez || []).filter(r => r.tarih >= ayOnce).reduce((acc, r) => acc + (r.toplam_fiyat || 0), 0)
@@ -1359,7 +1422,7 @@ const { data: tumRez } = await sb.from('rezervasyonlar').select('*, sahalar(isim
         <tbody>${sonRez.map(r => `
           <tr>
             <td><strong>${r.sahalar?.isim || '—'}</strong></td>
-      <td>${r.kullanici_id?.slice(0,8) || '—'}</td>
+            <td>${r.kullanicilar?.isim || '—'}</td>
             <td>${new Date(r.tarih).toLocaleDateString('tr-TR')}</td>
             <td>${r.saat_baslangic}</td>
             <td><strong>₺${r.toplam_fiyat}</strong></td>
