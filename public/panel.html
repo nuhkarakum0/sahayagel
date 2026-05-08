@@ -1019,12 +1019,13 @@ function panelAc() {
 function sayfaGoster(sayfa) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'))
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'))
-  document.getElementById('page-' + sayfa).classList.add('active')
-  event.currentTarget.classList.add('active')
+  const pageEl = document.getElementById('page-' + sayfa)
+  if (pageEl) pageEl.classList.add('active')
+  if (event && event.currentTarget) event.currentTarget.classList.add('active')
   
   if (sayfa === 'rezervasyonlar') rezervasyonlariYukle()
   if (sayfa === 'gelir') gelirYukle()
-  if (sayfa === 'takvim') { sahalariYukle().then(() => takvimSahalariniYukle()) }
+  if (sayfa === 'takvim') takvimSahalariniYukle()
 }
 
 // SAHALAR
@@ -1166,10 +1167,9 @@ async function sahaSil(id) {
 let takvimDurum = {}
 
 async function takvimSahalariniYukle() {
-  if (sahalar.length === 0) {
-    const { data } = await sb.from('sahalar').select('*').eq('sahip_id', aktifKullanici.id)
-    sahalar = data || []
-  }
+  const { data } = await sb.from('sahalar').select('*').eq('sahip_id', aktifKullanici.id)
+  sahalar = data || []
+  
   const select = document.getElementById('takvim-saha-select')
   const mevcutDeger = select.value
   select.innerHTML = '<option value="">Saha seç...</option>' + sahalar.map(s => `<option value="${s.id}">${s.isim}</option>`).join('')
